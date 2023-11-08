@@ -1,9 +1,9 @@
 {
-  "name": "solid-auth",
+  "name": "solid-auth-service",
   "version": "0.0.1",
   "private": true,
   "scripts": {
-    "start": "node dist/bin/www.js"
+    "start": "node dist/app.js"
   },
   "dependencies": {
     "@inrupt/solid-client-authn-node": "^1.17.3",

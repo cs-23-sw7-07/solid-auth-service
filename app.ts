@@ -1,15 +1,14 @@
 import express from "express";
-import path from "path";
-import cookieParser from "cookie-parser";
-import logger from "morgan";
-
 import cookieSession from "cookie-session";
 import {getSessionFromStorage, getSessionIdFromStorageAll, Session} from "@inrupt/solid-client-authn-node";
 import {config} from "dotenv";
+import * as fs from "fs";
+import * as https from "https";
 
 config()
 const app = express();
 const port = process.env.PORT || 3000;
+const hostname = "0.0.0.0"
 
 // The following snippet ensures that the server identifies each user's session
 // with a cookie using an express-specific mechanism
@@ -105,11 +104,19 @@ app.get("/", async (req, res, next) => {
     );
 });
 
-app.listen(port, () => {
-    console.log(
-        `Server running on port [${port}]. ` +
-        `Visit [http://localhost:${port}/login] to log in to [login.inrupt.com].`
-    );
+const options = {
+    key: fs.readFileSync('/etc/letsencrypt/live/sw7-07.online/privkey.pem'),
+    cert: fs.readFileSync('/etc/letsencrypt/live/sw7-07.online/cert.pem')
+};
+
+const server = https.createServer(options, (req, res) => {
+    res.statusCode = 200;
+    res.setHeader('Content-Type', 'text/plain');
+    res.end('Hello World');
+});
+
+server.listen(443, hostname, () => {
+    console.log(`Server running at http://${hostname}:${port}/`);
 });
 
 export {app}

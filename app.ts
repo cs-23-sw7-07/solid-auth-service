@@ -8,7 +8,7 @@ import * as https from "https";
 config()
 const app = express();
 const port = parseInt(process.env.PORT || "3000");
-
+const address = process.env.ADDRESS || "localhost"
 const hostname = "0.0.0.0"
 
 // The following snippet ensures that the server identifies each user's session
@@ -43,7 +43,7 @@ app.get("/login", async (req, res, next) => {
         // After login, the Solid Identity Provider will send the user back to the following
         // URL, with the data necessary to complete the authentication process
         // appended as query parameters:
-        redirectUrl: `http://localhost:${port}/login/callback`,
+        redirectUrl: `https://${address}/login/callback`,
         // Set to the user's Solid Identity Provider; e.g., "https://login.inrupt.com"
         oidcIssuer: "https://login.inrupt.com",
         // Pick an application name that will be shown when asked
@@ -54,6 +54,7 @@ app.get("/login", async (req, res, next) => {
 });
 
 app.get("/login/callback", async (req, res) => {
+    console.log("callback called")
     // 3. If the user is sent back to the `redirectUrl` provided in step 2,
     //    it means that the login has been initiated and can be completed. In
     //    particular, initiating the login stores the session in storage,
@@ -63,7 +64,7 @@ app.get("/login/callback", async (req, res) => {
     // 4. With your session back from storage, you are now able to
     //    complete the login process using the data appended to it as query
     //    parameters in req.url by the Solid Identity Provider:
-    await session!.handleIncomingRedirect(`http://localhost:${port}${req.url}`);
+    await session!.handleIncomingRedirect(`https://${address}${req.url}`);
 
     // 5. `session` now contains an authenticated Session instance.
     if (session!.info.isLoggedIn) {

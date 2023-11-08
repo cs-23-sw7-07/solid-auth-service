@@ -7,7 +7,8 @@ import * as https from "https";
 
 config()
 const app = express();
-const port = process.env.PORT || 3000;
+const port = parseInt(process.env.PORT || "3000");
+
 const hostname = "0.0.0.0"
 
 // The following snippet ensures that the server identifies each user's session
@@ -109,14 +110,10 @@ const options = {
     cert: fs.readFileSync('/etc/letsencrypt/live/sw7-07.online/cert.pem')
 };
 
-const server = https.createServer(options, (req, res) => {
-    res.statusCode = 200;
-    res.setHeader('Content-Type', 'text/plain');
-    res.end('Hello World');
-});
+const server = https.createServer(options, app);
 
-server.listen(443, hostname, () => {
-    console.log(`Server running at http://${hostname}:${port}/`);
+server.listen(port, hostname, () => {
+    console.log(`Server running at https://${hostname}:${port}/`);
 });
 
 export {app}

@@ -85,22 +85,6 @@ app.get("/login/callback", async (req, res) => {
 
     // 5. `session` now contains an authenticated Session instance.
     const webId = session!.info.webId!
-    const agent_URI = webId2AuthorizationAgentUrl(webId)
-    const profile_document: ProfileDocument = await ProfileDocument.getProfileDocument(webId)
-
-    if (!profile_document.hasAuthorizationAgent(agent_URI)) {
-        profile_document.addhasAuthorizationAgent(agent_URI)
-        profile_document.updateProfile(session!)
-    }
-
-    const pods = await getPodUrlAll(webId, { fetch: session!.fetch })
-    cache.set(webId, new AuthorizationAgent(new SocialAgent(webId), agent_URI, pods[0], session!))
-
-    cache.get(webId)?.createRegistriesSet()
-
-    // await insertFile(session!, "https://puvikaran.solidcommunity.net/profile/abcde/", profile_document)
-    // await createContainer(session!, "https://puvikaran.solidcommunity.net/profile/ab/aaaaa/", await serializeTurtle(profile_document, { "interop": "http://www.w3.org/ns/solid/interop#" }))
-    // await updateContainer(session!, "https://puvikaran.solidcommunity.net/profile/ab/aaaaa/.meta", profile_document)
     if (session!.info.isLoggedIn) {
         return res.send(`<p>Logged in with the WebID ${webId}.</p>`);
     }

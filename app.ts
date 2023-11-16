@@ -219,16 +219,97 @@ authorization_router.head("/:webId", (req, res) => {
     // return the agent registration of the requesting application agent
 })
 
+// authorization_router.get("/:webId/redirect", (req, res) => {
+//     const authorization_agent: AuthorizationAgent = cache.get(authorizationAgentUrl2webId(req.params.webId))!
+//     const { client_id } = req.query
+
+//     // Redirect the user to the approval/rejection page with the client_id
+//     res.redirect(`/approval-page.html?client_id=${client_id}`);
+// });
+    
+// In-memory store to simulate the state of pop-up interactions
+const popUpStatusStore: Record<string, string> = {};
+
 authorization_router.get("/:webId/redirect", (req, res) => {
-    const authorization_agent: AuthorizationAgent = cache.get(authorizationAgentUrl2webId(req.params.webId))!
-    const { client_id } = req.query
-    // return the page where the user can approve or reject access
-})
+    const { client_id } = req.query;
+
+    // Generate a unique pop-up identifier
+    const popUpId = generatePopUpId();
+
+    // Store the initial status as 'pending'
+    popUpStatusStore[popUpId] = 'pending';
+
+    // Send a simple HTML page with a script to handle the pop-up interaction
+    const pageContent = `
+        <!DOCTYPE html>
+        <html lang="en">
+        <head>
+            <meta charset="UTF-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <title>Pop-up Page</title>
+        </head>
+        <body>
+            <h1>Authorization Pop-up</h1>
+            <button onclick="handleAction('allowed', '${popUpId}')">Allow</button>
+            <button onclick="handleAction('disallowed', '${popUpId}')">Disallow</button>
+
+            <script>
+                function handleAction(status, popUpId) {
+                    // Make a request to the server to handle the action
+                    fetch('/handle-action', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({ popUpId, status }),
+                    })
+                    .catch(error => {
+                        console.error('Error:', error);
+                    });
+                }
+            </script>
+        </body>
+        </html>
+    `;
+
+    // Send the HTML page to the client
+    res.send(pageContent);
+
+    // Poll the status of the pop-up every second
+    const intervalId = setInterval(() => {
+        const status = popUpStatusStore[popUpId];
+
+        if (status === 'allowed' || status === 'disallowed') {
+            // Send the final status to the original client
+            res.status(200).json({ message: `Status: ${status} for Client ID: ${client_id}` });
+
+            // Clear the interval since the interaction is complete
+            clearInterval(intervalId);
+        }
+    }, 1000);
+});
+
+authorization_router.post("/handle-action", (req, res) => {
+    const { popUpId, status } = req.body;
+
+    // Update the status in the store
+    popUpStatusStore[popUpId] = status;
+
+    // Send a response to acknowledge the update
+    res.json({ message: 'Status updated successfully' });
+});
+
+function generatePopUpId(): string {
+    return Math.random().toString(36).substring(7);
+}
+
 
 authorization_router.post("/:webId/result", (req, res) => {
     const authorization_agent: AuthorizationAgent = cache.get(authorizationAgentUrl2webId(req.params.webId))!
     const client_id = req.query.client_id
     // return the page where the user can approve or reject access
-})
+});
+
+app.use(express.static('src'));
 
 export { app };

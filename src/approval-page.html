@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pop-up Page</title>
+</head>
+
+<body>
+    <h1>Authorization Pop-up</h1>
+    <button onclick="handleAction('allowed')">Allow</button>
+    <button onclick="handleAction('disallowed')">Disallow</button>
+
+    <script>
+        function handleAction(status) {
+            // Make a request to the server to handle the action
+            fetch('/handle-action', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(status),
+            }).then
+                .catch(error => {
+                    console.error('Error:', error);
+                });
+        }
+    </script>
+</body>
+</html>

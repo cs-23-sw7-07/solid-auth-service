@@ -12,7 +12,7 @@ import { SocialAgent } from "./src/agent";
 import { AuthorizationAgent } from "./src/authorization-agent";
 import { getPodUrlAll } from "@inrupt/solid-client";
 import { ProfileDocument } from "./src/profile-document";
-import { webId2AuthorizationAgentUrl } from "./src/utils/uri-convert";
+import { authorizationAgentUrl2webId, webId2AuthorizationAgentUrl } from "./src/utils/uri-convert";
 
 config();
 const app = express();
@@ -87,12 +87,12 @@ app.get("/login/callback", async (req, res) => {
     const webId = session!.info.webId!
     const agent_URI = webId2AuthorizationAgentUrl(webId)
     const profile_document: ProfileDocument = await ProfileDocument.getProfileDocument(webId)
-    
+
     if (!profile_document.hasAuthorizationAgent(agent_URI)) {
         profile_document.addhasAuthorizationAgent(agent_URI)
         profile_document.updateProfile(session!)
     }
-    
+
     const pods = await getPodUrlAll(webId, { fetch: session!.fetch })
     cache.set(webId, new AuthorizationAgent(new SocialAgent(webId), agent_URI, pods[0], session!))
 
@@ -154,5 +154,97 @@ if (useHttps) {
         console.log(`Server running at http://${hostname}:${port}/`);
     });
 }
+
+
+
+const authorization_router = express.Router()
+app.use('/agents', authorization_router);
+
+authorization_router.get("/new", async (req, res) => {
+    // 1. Create a new Session
+    const session = new Session();
+    req.session!.sessionId = session.info.sessionId;
+    const redirectToSolidIdentityProvider = (url: string) => {
+        // Since we use Express in this example, we can call `res.redirect` to send the user to the
+        // given URL, but the specific method of redirection depend on your app's particular setup.
+        // For example, if you are writing a command line app, this might simply display a prompt for
+        // the user to visit the given URL in their browser.
+        res.redirect(url);
+    };
+    // 2. Start the login process; redirect handler will handle sending the user to their
+    //    Solid Identity Provider.
+    await session.login({
+        // After login, the Solid Identity Provider will send the user back to the following
+        // URL, with the data necessary to complete the authentication process
+        // appended as query parameters:
+        redirectUrl: `${protocol}${address}:${port}/agents/new/callback`,
+        // Set to the user's Solid Identity Provider; e.g., "https://login.inrupt.com"
+        oidcIssuer: oidcIssuers[2],
+        // Pick an application name that will be shown when asked
+        // to approve the application's access to the requested data.
+        clientName: "Authorization Agent",
+        handleRedirect: redirectToSolidIdentityProvider,
+    });
+    // return turtle document with the redirecct endpoints
+})
+
+authorization_router.get("/new/callback", async (req, res) => {
+    // 3. If the user is sent back to the `redirectUrl` provided in step 2,
+    //    it means that the login has been initiated and can be completed. In
+    //    particular, initiating the login stores the session in storage,
+    //    which means it can be retrieved as follows.
+    const session = await getSessionFromStorage(req.session!.sessionId);
+
+    // 4. With your session back from storage, you are now able to
+    //    complete the login process using the data appended to it as query
+    //    parameters in req.url by the Solid Identity Provider:
+    await session!.handleIncomingRedirect(
+        `${req.protocol}://${req.get("host")}${req.originalUrl}`,
+    );
+
+    // 5. `session` now contains an authenticated Session instance.
+    const webId = session!.info.webId!
+    const agent_URI = webId2AuthorizationAgentUrl(webId)
+    const profile_document: ProfileDocument = await ProfileDocument.getProfileDocument(webId)
+
+    if (!profile_document.hasAuthorizationAgent(agent_URI)) {
+        profile_document.addhasAuthorizationAgent(agent_URI)
+        profile_document.updateProfile(session!)
+    }
+
+    const pods = await getPodUrlAll(webId, { fetch: session!.fetch })
+    cache.set(webId, new AuthorizationAgent(new SocialAgent(webId), agent_URI, pods[0], session!))
+
+    cache.get(webId)?.createRegistriesSet()
+
+    // await insertFile(session!, "https://puvikaran.solidcommunity.net/profile/abcde/", profile_document)
+    // await createContainer(session!, "https://puvikaran.solidcommunity.net/profile/ab/aaaaa/", await serializeTurtle(profile_document, { "interop": "http://www.w3.org/ns/solid/interop#" }))
+    // await updateContainer(session!, "https://puvikaran.solidcommunity.net/profile/ab/aaaaa/.meta", profile_document)
+    if (session!.info.isLoggedIn) {
+        return res.send(`<p>Logged in with the WebID ${webId}.</p>`);
+    }
+});
+
+authorization_router.get("/:webId", (req, res) => {
+    const authorization_agent: AuthorizationAgent = cache.get(authorizationAgentUrl2webId(req.params.webId))!
+    // return turtle document with the redirecct endpoints
+})
+
+authorization_router.head("/:webId", (req, res) => {
+    const authorization_agent: AuthorizationAgent = cache.get(authorizationAgentUrl2webId(req.params.webId))!
+    // return the agent registration of the requesting application agent
+})
+
+authorization_router.get("/:webId/redirect", (req, res) => {
+    const authorization_agent: AuthorizationAgent = cache.get(authorizationAgentUrl2webId(req.params.webId))!
+    const { client_id } = req.query
+    // return the page where the user can approve or reject access
+})
+
+authorization_router.post("/:webId/result", (req, res) => {
+    const authorization_agent: AuthorizationAgent = cache.get(authorizationAgentUrl2webId(req.params.webId))!
+    const client_id = req.query.client_id
+    // return the page where the user can approve or reject access
+})
 
 export { app };

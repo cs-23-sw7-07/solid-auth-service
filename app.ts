@@ -13,6 +13,8 @@ import { AuthorizationAgent } from "./src/authorization-agent";
 import { getPodUrlAll } from "@inrupt/solid-client";
 import { ProfileDocument } from "./src/profile-document";
 import { authorizationAgentUrl2webId, webId2AuthorizationAgentUrl } from "./src/utils/uri-convert";
+import { AccessApprovalHandler } from "./src/handlers/AccessApprovalHandler";
+import e from "express";
 
 config();
 const app = express();
@@ -25,6 +27,9 @@ const private_key = process.env.PRIVATEKEY ?? "";
 const certificate = process.env.CERTIFICATE ?? "";
 
 const oidcIssuers = ["https://login.inrupt.com", "https://solidweb.me", "https://solidcommunity.net"]
+
+const accessApprovalHandler = new AccessApprovalHandler();
+
 
 type WebId = string;
 const cache = new Map<WebId, AuthorizationAgent>();
@@ -221,8 +226,14 @@ authorization_router.head("/:webId", (req, res) => {
 
 authorization_router.get("/:webId/redirect", (req, res) => {
     const authorization_agent: AuthorizationAgent = cache.get(authorizationAgentUrl2webId(req.params.webId))!
-    const { client_id } = req.query
-    // return the page where the user can approve or reject access
+    const { client_id } = req.query;
+    const approval: boolean = accessApprovalHandler.requestAccessApproval();
+    if(approval){
+        res.status(200).send('You got access');
+    }
+    else{
+        res.status(403).send('Your request got rejected');
+    }
 })
 
 authorization_router.post("/:webId/result", (req, res) => {

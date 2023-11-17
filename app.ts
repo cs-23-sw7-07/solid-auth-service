@@ -15,7 +15,7 @@ import { authorizationAgentUrl2webId, webId2AuthorizationAgentUrl } from "./src/
 import { AccessApprovalHandler } from "./src/handlers/AccessApprovalHandler";
 import { ApplicationRegistration } from "solid-interoperability/src/data-management/data-model/agent-registration/application-registration"
 import { ApplicationAgent, SocialAgent } from "solid-interoperability";
-import { insertTurtleResource, readResource } from "./src/utils/modify-pod";
+import { createContainer, insertTurtleResource, readResource } from "./src/utils/modify-pod";
 import { serializeTurtle } from "./src/utils/turtle-serializer";
 
 config();
@@ -205,16 +205,18 @@ authorization_router.get("/new/callback", async (req, res) => {
     cache.set(webId, new AuthorizationAgent(new SocialAgent(webId), new ApplicationAgent(agent_URI), pods[0], session!))
 
     cache.get(webId)?.createRegistriesSet()
-    // console.log(await readContainer(cache.get(webId)?.session!, "https://puvikaran.solidcommunity.net/profile/abcde"))
     
+    const sess = cache.get(webId)?.session as Session
+
     console.log("INSERT DOCUMENT")
-    await insertTurtleResource(cache.get(webId)?.session!, "https://puvikaran.solidcommunity.net/profile/testtesttest", await serializeTurtle(profile_document.dataset, { "interop": "http://www.w3.org/ns/solid/interop#" }))
+    await insertTurtleResource(sess, cache.get(webId)?.registries_container + "testtesttestaabbbbb", await serializeTurtle(profile_document.dataset, { "interop": "http://www.w3.org/ns/solid/interop#" }))
     console.log("INSERTED DOCUMENT")
     console.log("READ DOCUMENT")
-    console.log(await readResource(cache.get(webId)?.session!, "https://puvikaran.solidcommunity.net/profile/testtesttest"))
+    console.log(await readResource(sess, cache.get(webId)?.registries_container + "testtesttestaabbbbb"))
+    // console.log(await readContainer(cache.get(webId)?.session!, "https://puvikaran.solidcommunity.net/profile/abcde"))
+    
 
     // console.log(await readContainer(cache.get(webId)?.session!, "https://puvikaran1.solidcommunity.net/privatae/"))
-
     // await insertFile(session!, "https://puvikaran.solidcommunity.net/profile/abcde/", profile_document)
     // await createContainer(session!, "https://puvikaran.solidcommunity.net/profile/ab/aaaaa/", await serializeTurtle(profile_document, { "interop": "http://www.w3.org/ns/solid/interop#" }))
     // await updateContainer(session!, "https://puvikaran.solidcommunity.net/profile/ab/aaaaa/.meta", profile_document)

@@ -12,17 +12,16 @@ const { namedNode } = DataFactory
 
 export const type_a = namedNode("http://www.w3.org/1999/02/22-rdf-syntax-ns#type")
 
-const getItemName = (url: string) => {
-    return url.substr(url.lastIndexOf('/') + 1)
-  }
+// const getItemName = (url: string) => {
+//     return url.substr(url.lastIndexOf('/') + 1)
+//   }
   
 
 export async function insertTurtleResource(session: Session, uri: string, document_rdf: string) {
     await session.fetch(uri, {
-        method: "POST",
+        method: "PUT",
         body: document_rdf,
         headers: {
-            slug: getItemName(uri),
             "link": '<http://www.w3.org/ns/ldp#Resource>; rel="type"',
             "Content-Type": "text/turtle"
         }
@@ -30,14 +29,18 @@ export async function insertTurtleResource(session: Session, uri: string, docume
 }
 
 export async function createContainer(session: Session, uri_container: string) {
-    const response = await session.fetch(uri_container, {
-        method: 'PUT',
-        headers: {
-            "Content-Type": "text/turtle"
-        }
+    const headers = new Headers({
+        'Content-Type': 'text/turtle',
     });
+
+    const requestOptions: RequestInit = {
+        method: 'PUT',
+        headers: headers,
+    };
+
+    const response = await session.fetch(uri_container, requestOptions);
     if (!response.ok) {
-        throw new Error(`failed to create containers ${uri_container}`);
+        throw new Error(`failed to create containers ${uri_container} ${response}`);
     }
 }
 

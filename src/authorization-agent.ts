@@ -10,6 +10,7 @@ import { ApplicationAgent } from "solid-interoperability/src/data-management/dat
 import { AccessGrant } from "solid-interoperability/src/data-management/data-model/authorization/access-grant";
 import { randomUUID } from "crypto";
 import { AccessNeed, ApplicationProfileDocument } from "./application-profile-document";
+import { serializeTurtle } from "./utils/turtle-serializer";
 
 const { Store, DataFactory } = N3;
 const { namedNode } = DataFactory
@@ -47,6 +48,12 @@ export class AuthorizationAgent {
         registries_store.addQuad(namedNode(this.registries_container), namedNode("interop:hasDataRegistry"), namedNode(this.DataRegistry_container))
 
         await updateContainerResource(this.session, this.registries_container + ".meta", registries_store)
+
+        // console.log("INSERT DOCUMENT")
+        // await insertTurtleResource(this.session, this.registries_container + "testtesttestabbbb", await serializeTurtle(profile_document.dataset, { "interop": "http://www.w3.org/ns/solid/interop#" }))
+        // console.log("INSERTED DOCUMENT")
+        // console.log("READ DOCUMENT")
+        // console.log(await readContainer(this.session, this.registries_container + "testtesttestabbbb"))
     }
 
     newId(uri: string) {

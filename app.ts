@@ -8,13 +8,15 @@ import {
 import { config } from "dotenv";
 import * as fs from "fs";
 import * as https from "https";
-import { SocialAgent } from "./src/agent";
-import { AuthorizationAgent } from "./src/authorization-agent";
+import { ApplicationRegistrationNotExist, AuthorizationAgent } from "./src/authorization-agent";
 import { getPodUrlAll } from "@inrupt/solid-client";
 import { ProfileDocument } from "./src/profile-document";
 import { authorizationAgentUrl2webId, webId2AuthorizationAgentUrl } from "./src/utils/uri-convert";
 import { AccessApprovalHandler } from "./src/handlers/AccessApprovalHandler";
-import e from "express";
+import { ApplicationRegistration } from "solid-interoperability/src/data-management/data-model/agent-registration/application-registration"
+import { ApplicationAgent, SocialAgent } from "solid-interoperability";
+import { insertTurtleResource, readContainer } from "./src/utils/modify-pod";
+import { serializeTurtle } from "./src/utils/turtle-serializer";
 
 config();
 const app = express();
@@ -144,8 +146,6 @@ if (useHttps) {
     });
 }
 
-
-
 const authorization_router = express.Router()
 app.use('/agents', authorization_router);
 
@@ -202,15 +202,24 @@ authorization_router.get("/new/callback", async (req, res) => {
     }
 
     const pods = await getPodUrlAll(webId, { fetch: session!.fetch })
-    cache.set(webId, new AuthorizationAgent(new SocialAgent(webId), agent_URI, pods[0], session!))
+    cache.set(webId, new AuthorizationAgent(new SocialAgent(webId), new ApplicationAgent(agent_URI), pods[0], session!))
 
     cache.get(webId)?.createRegistriesSet()
+    // console.log(await readContainer(cache.get(webId)?.session!, "https://puvikaran.solidcommunity.net/profile/abcde"))
+    
+    console.log("INSERT DOCUMENT")
+    await insertTurtleResource(cache.get(webId)?.session!, "https://puvikaran.solidcommunity.net/profile/testtesttest", await serializeTurtle(profile_document.dataset, { "interop": "http://www.w3.org/ns/solid/interop#" }))
+    console.log("INSERTED DOCUMENT")
+    console.log("READ DOCUMENT")
+    console.log(await readContainer(cache.get(webId)?.session!, "https://puvikaran.solidcommunity.net/profile/testtesttest"))
+
+    // console.log(await readContainer(cache.get(webId)?.session!, "https://puvikaran1.solidcommunity.net/privatae/"))
 
     // await insertFile(session!, "https://puvikaran.solidcommunity.net/profile/abcde/", profile_document)
     // await createContainer(session!, "https://puvikaran.solidcommunity.net/profile/ab/aaaaa/", await serializeTurtle(profile_document, { "interop": "http://www.w3.org/ns/solid/interop#" }))
     // await updateContainer(session!, "https://puvikaran.solidcommunity.net/profile/ab/aaaaa/.meta", profile_document)
     if (session!.info.isLoggedIn) {
-        return res.send(`<p>Logged in with the WebID ${webId}.</p>`);
+        return res.send(`<p>Logged in with the WebID ${webId}. <a herf="localhost:3001/agents/new"></p>`);
     }
 });
 
@@ -219,9 +228,18 @@ authorization_router.get("/:webId", (req, res) => {
     // return turtle document with the redirecct endpoints
 })
 
+// return the agent registration of the requesting application agent
 authorization_router.head("/:webId", (req, res) => {
     const authorization_agent: AuthorizationAgent = cache.get(authorizationAgentUrl2webId(req.params.webId))!
-    // return the agent registration of the requesting application agent
+    const client_id : string = req.query.client_id as string
+    console.log(client_id)
+    const registration : ApplicationRegistration | undefined = authorization_agent.findApplicationRegistration(client_id)
+    if (registration) {
+
+    }
+    else {
+        res.status(400)
+    }
 })
 
 authorization_router.get("/:webId/redirect", (req, res) => {
@@ -243,3 +261,6 @@ authorization_router.post("/:webId/result", (req, res) => {
 })
 
 export { app };
+
+
+// save(url : string, document : turtle)

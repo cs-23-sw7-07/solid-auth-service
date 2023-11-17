@@ -50,7 +50,7 @@ export class ProfileDocument {
             headers: {
                 "Content-Type": "text/turtle"
             }
-        }).then(console.log);
+        });
     }
 
 

@@ -15,7 +15,7 @@ import { authorizationAgentUrl2webId, webId2AuthorizationAgentUrl } from "./src/
 import { AccessApprovalHandler } from "./src/handlers/AccessApprovalHandler";
 import { ApplicationRegistration } from "solid-interoperability/src/data-management/data-model/agent-registration/application-registration"
 import { ApplicationAgent, SocialAgent } from "solid-interoperability";
-import { createContainer, insertTurtleResource, readContainer } from "./src/utils/modify-pod";
+import { createContainer, insertTurtleResource, readContainer as readResource } from "./src/utils/modify-pod";
 import { serializeTurtle } from "./src/utils/turtle-serializer";
 
 config();
@@ -212,7 +212,7 @@ authorization_router.get("/new/callback", async (req, res) => {
     await insertTurtleResource(sess, cache.get(webId)?.registries_container + "testtesttestaabbbbb", await serializeTurtle(profile_document.dataset, { "interop": "http://www.w3.org/ns/solid/interop#" }))
     console.log("INSERTED DOCUMENT")
     console.log("READ DOCUMENT")
-    console.log(await readContainer(sess, cache.get(webId)?.registries_container + "testtesttestaabbbbb"))
+    console.log(await readResource(sess, cache.get(webId)?.registries_container + "testtesttestaabbbbb"))
     // console.log(await readContainer(cache.get(webId)?.session!, "https://puvikaran.solidcommunity.net/profile/abcde"))
     
 

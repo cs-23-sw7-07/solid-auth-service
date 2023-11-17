@@ -83,7 +83,7 @@ class ContainerInfo {
     }
 }
 
-export function readContainer(session: Session, url: string): Promise<string> {
+export function readResource(session: Session, url: string): Promise<string> {
     return session.fetch(url)
                     .then(res => res.text())
 }

@@ -15,7 +15,7 @@ import { authorizationAgentUrl2webId, webId2AuthorizationAgentUrl } from "./src/
 import { AccessApprovalHandler } from "./src/handlers/AccessApprovalHandler";
 import { ApplicationRegistration } from "solid-interoperability/src/data-management/data-model/agent-registration/application-registration"
 import { ApplicationAgent, SocialAgent } from "solid-interoperability";
-import { insertTurtleResource, readContainer } from "./src/utils/modify-pod";
+import { insertTurtleResource, readResource } from "./src/utils/modify-pod";
 import { serializeTurtle } from "./src/utils/turtle-serializer";
 
 config();
@@ -211,7 +211,7 @@ authorization_router.get("/new/callback", async (req, res) => {
     await insertTurtleResource(cache.get(webId)?.session!, "https://puvikaran.solidcommunity.net/profile/testtesttest", await serializeTurtle(profile_document.dataset, { "interop": "http://www.w3.org/ns/solid/interop#" }))
     console.log("INSERTED DOCUMENT")
     console.log("READ DOCUMENT")
-    console.log(await readContainer(cache.get(webId)?.session!, "https://puvikaran.solidcommunity.net/profile/testtesttest"))
+    console.log(await readResource(cache.get(webId)?.session!, "https://puvikaran.solidcommunity.net/profile/testtesttest"))
 
     // console.log(await readContainer(cache.get(webId)?.session!, "https://puvikaran1.solidcommunity.net/privatae/"))
 
@@ -244,10 +244,11 @@ authorization_router.head("/:webId", (req, res) => {
 
 authorization_router.get("/:webId/redirect", (req, res) => {
     const authorization_agent: AuthorizationAgent = cache.get(authorizationAgentUrl2webId(req.params.webId))!
-    const { client_id } = req.query;
+    const client_id: string = req.query.client_id as string;
     const approval: boolean = accessApprovalHandler.requestAccessApproval();
     if(approval){
-        res.status(200).send('You got access');
+        authorization_agent.newApplication(client_id);
+        res.status(202).send();
     }
     else{
         res.status(403).send('Your request got rejected');

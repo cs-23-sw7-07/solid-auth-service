@@ -27,6 +27,12 @@ export class ApplicationProfileDocument {
 }
 
 export class AccessNeed {
+    getCreatorAccessMode(): import("solid-interoperability").AccessMode[] | undefined {
+        throw new Error("Method not implemented.");
+    }
+    getRegistratedShapeTree(): string {
+        throw new Error("Method not implemented.");
+    }
     constructor(public id : string, public dataset : DatasetCore) {
         
     }

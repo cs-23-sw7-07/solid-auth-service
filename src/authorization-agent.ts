@@ -1,6 +1,6 @@
 import N3 from "n3";
 import { Session } from "@inrupt/solid-client-authn-node";
-import { createContainer, readContainer, type_a, updateContainerResource } from "./utils/modify-pod";
+import { createContainer, insertTurtleResource, readContainer, type_a, updateContainerResource } from "./utils/modify-pod";
 import { DatasetCore } from "@rdfjs/types";
 import { ProfileDocument } from "./profile-document";
 import { AccessAuthorization, AccessMode, Agent, AgentRegistration, ApplicationRegistration, DataAuthorization, DataRegistration, GrantScope, SocialAgent } from "solid-interoperability";
@@ -9,6 +9,7 @@ import { parseTurtle } from "./utils/turtle-parser";
 import { ApplicationAgent } from "solid-interoperability/src/data-management/data-model/agent";
 import { AccessGrant } from "solid-interoperability/src/data-management/data-model/authorization/access-grant";
 import { randomUUID } from "crypto";
+import { serializeTurtle } from "./utils/turtle-serializer";
 
 const { Store, DataFactory } = N3;
 const { namedNode } = DataFactory
@@ -24,7 +25,7 @@ export class AuthorizationAgent {
                 public pod : string, 
                 public session : Session) {
         
-        this.registries_container = this.pod + "Registries/"
+        this.registries_container = this.pod + "Registriesa/"
         this.AgentRegistry_container = this.pod + "Registries/agentregisties/"
         this.AuthorizationRegistry_container = this.pod + "Registries/accessregisties/"
         this.DataRegistry_container = this.pod + "data/"
@@ -46,6 +47,12 @@ export class AuthorizationAgent {
         registries_store.addQuad(namedNode(this.registries_container), namedNode("interop:hasDataRegistry"), namedNode(this.DataRegistry_container))
 
         await updateContainerResource(this.session, this.registries_container + ".meta", registries_store)
+
+        // console.log("INSERT DOCUMENT")
+        // await insertTurtleResource(this.session, this.registries_container + "testtesttestabbbb", await serializeTurtle(profile_document.dataset, { "interop": "http://www.w3.org/ns/solid/interop#" }))
+        // console.log("INSERTED DOCUMENT")
+        // console.log("READ DOCUMENT")
+        // console.log(await readContainer(this.session, this.registries_container + "testtesttestabbbb"))
     }
 
     newId(uri : string){

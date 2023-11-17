@@ -249,7 +249,7 @@ authorization_router.get("/:webId/redirect", (req, res) => {
     const client_id: string = req.query.client_id as string;
     const approval: boolean = accessApprovalHandler.requestAccessApproval();
     if(approval){
-        authorization_agent.newApplication(client_id);
+        authorization_agent.newApplication(client_id, accessApprovalHandler.getAccessScope());
         res.status(202).send();
     }
     else{

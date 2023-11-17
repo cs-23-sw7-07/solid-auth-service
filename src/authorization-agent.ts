@@ -11,6 +11,8 @@ import { AccessGrant } from "solid-interoperability/src/data-management/data-mod
 import { randomUUID } from "crypto";
 import { AccessNeed, ApplicationProfileDocument } from "./application-profile-document";
 import { serializeTurtle } from "./utils/turtle-serializer";
+import { createDataAuthorizations } from "./utils/data-authorization-util";
+import { access } from "fs";
 
 const { Store, DataFactory } = N3;
 const { namedNode } = DataFactory
@@ -60,10 +62,21 @@ export class AuthorizationAgent {
         return uri + randomUUID() + "/"
     }
 
-    async newDataAuthorization(grantee: Agent, registeredShapeTree: string, accessMode: AccessMode[], scopeOfAuthorization: GrantScope, satisfiesAccessNeed: string, hasDataInstanceIRIs?: string[], creatorAccessMode?: AccessMode[], inheritsFromAuthorization?: DataAuthorization) {
+    async newDataAuthorization(
+        grantee: Agent, 
+        registeredShapeTree: string, 
+        accessMode: AccessMode[], 
+        scopeOfAuthorization: GrantScope, 
+        satisfiesAccessNeed: string, 
+        hasDataInstanceIRIs?: string[], 
+        creatorAccessMode?: AccessMode[], 
+        inheritsFromAuthorization?: DataAuthorization) {
         const data_registration = await this.findDataRegistration(registeredShapeTree)
-        return new DataAuthorization(this.newId(this.AuthorizationRegistry_container),
-            this.social_agent, grantee, registeredShapeTree,
+        return new DataAuthorization(
+            this.newId(this.AuthorizationRegistry_container),
+            this.social_agent, 
+            grantee, 
+            registeredShapeTree,
             data_registration,
             accessMode,
             scopeOfAuthorization,
@@ -77,11 +90,25 @@ export class AuthorizationAgent {
         return new AccessAuthorization(this.newId(this.AuthorizationRegistry_container), this.social_agent, this.authorization_agent, new Date(), registeredAgent, hasAccessNeedGroup, data_authorizations)
     }
 
-    async newApplication(registeredAgentId: string) {
+    async newApplication(registeredAgentId: string, scopeOfGrant: GrantScope) {
         const webIdDoc = await readResource(this.session, registeredAgentId);
         const dataset = await parseTurtle(webIdDoc);
         const applicationProfileDocument = new ApplicationProfileDocument(registeredAgentId, dataset);
-        //const dataAuthorizations = this.createAccessAuthorization();
+        const accessNeedGroup = applicationProfileDocument.gethasAccessNeedGroup(); 
+        const data_authorizations: DataAuthorization[] = [];
+        if(!accessNeedGroup)
+            throw new Error("Undefined accessNeedGroup");
+        const accessNeeds: AccessNeed[] = await applicationProfileDocument.gethasAccessNeeds(this.session.fetch, accessNeedGroup);
+        accessNeeds.forEach(accessNeed => {
+            data_authorizations.push(createDataAuthorizations(applicationProfileDocument, accessNeed, scopeOfGrant, this));
+        });
+        const hasAccessNeedGroup = "";
+        const accessAuthorization: AccessAuthorization = this.createAccessAuthorization(
+            applicationProfileDocument,
+            scopeOfGrant,
+            hasAccessNeedGroup,
+            dataAuthorizations
+        );
 
     }
 
@@ -146,22 +173,7 @@ export class AuthorizationAgent {
             hasAccessNeedGroup,
             dataAuthorizations);
     }
-    // createDataAuthorizations(applicationProfile: ApplicationProfileDocument, accessNeed: AccessNeed, scopeOfAuthorization: GrantScope): DataAuthorization {
-    //     const shapeTree = accessNeed.getRegistratedShapeTree();
-    //     return new DataAuthorization(
-    //         id,
-    //         this.social_agent,
-    //         new ApplicationAgent(applicationProfile.webId),
-    //         shapeTree,
-    //         this.getDataRegistration(shapeTree),
-    //         accessNeed.getAccessModes(),
-    //         scopeOfAuthorization,
-    //         accessNeed.id,
-    //         undefined,
-    //         accessNeed.getCreatorAccessMode(),
-    //         accessNeed.
-    //     );
-    // }
+    
     getDataRegistration(shapeTree: string): DataRegistration {
         throw new Error("Method not implemented.");
     }

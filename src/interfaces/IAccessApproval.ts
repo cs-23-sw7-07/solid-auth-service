@@ -1,3 +1,5 @@
+import { GrantScope } from "solid-interoperability";
+
 /**
  * The interface is used to deterem the status of the authorization request
  * @function
@@ -9,4 +11,5 @@
  */
 export interface IAccessApproval {
     requestAccessApproval(): boolean;
+    getAccessScope(): GrantScope;
 }

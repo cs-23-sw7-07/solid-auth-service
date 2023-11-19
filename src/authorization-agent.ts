@@ -1,14 +1,21 @@
 import N3 from "n3";
 import { Session } from "@inrupt/solid-client-authn-node";
-import { createContainer, readResource, type_a, updateContainerResource } from "./utils/modify-pod";
+import { createContainer, insertTurtleResource, readResource, type_a, updateContainerResource } from "./utils/modify-pod";
 import { DatasetCore } from "@rdfjs/types";
 import { ProfileDocument } from "./profile-document";
 import { AccessAuthorization, AccessGrant, AccessMode, Agent, AgentRegistration, ApplicationAgent, ApplicationRegistration, DataAuthorization, DataRegistration, GrantScope, SocialAgent } from "solid-interoperability";
 import { RdfFactory } from "solid-interoperability";
 import { parseTurtle } from "./utils/turtle-parser";
 import { randomUUID } from "crypto";
-import { AccessNeed, ApplicationProfileDocument } from "./application-profile-document";
+import { ApplicationProfileDocument } from "./RDF/application/application-profile-document";
+import { AccessNeed } from "./RDF/application/access-need";
 import { serializeTurtle } from "./utils/turtle-serializer";
+import { createDataAuthorizations } from "./utils/data-authorization-util";
+import { access } from "fs";
+import { Approval } from "./RDF/application/approval";
+import { DataAuthorizationBuilder } from "./RDF/builder/data-authorizations-builder";
+import { AccessAuthorizationBuilder } from "./RDF/builder/access-authorization-builder";
+import { AuthorizationBuilder } from "./RDF/builder/authorization-builder";
 
 const { Store, DataFactory } = N3;
 const { namedNode } = DataFactory
@@ -55,13 +62,24 @@ export class AuthorizationAgent {
     }
 
     newId(uri: string) {
-        return uri + randomUUID() + "/"
+        return uri + randomUUID()
     }
 
-    async newDataAuthorization(grantee: Agent, registeredShapeTree: string, accessMode: AccessMode[], scopeOfAuthorization: GrantScope, satisfiesAccessNeed: string, hasDataInstanceIRIs?: string[], creatorAccessMode?: AccessMode[], inheritsFromAuthorization?: DataAuthorization) {
+    async newDataAuthorization(
+        grantee: Agent,
+        registeredShapeTree: string,
+        accessMode: AccessMode[],
+        scopeOfAuthorization: GrantScope,
+        satisfiesAccessNeed: string,
+        hasDataInstanceIRIs?: string[],
+        creatorAccessMode?: AccessMode[],
+        inheritsFromAuthorization?: DataAuthorization) {
         const data_registration = await this.findDataRegistration(registeredShapeTree)
-        return new DataAuthorization(this.newId(this.AuthorizationRegistry_container),
-            this.social_agent, grantee, registeredShapeTree,
+        return new DataAuthorization(
+            this.newId(this.AuthorizationRegistry_container),
+            this.social_agent,
+            grantee,
+            registeredShapeTree,
             data_registration,
             accessMode,
             scopeOfAuthorization,
@@ -75,11 +93,34 @@ export class AuthorizationAgent {
         return new AccessAuthorization(this.newId(this.AuthorizationRegistry_container), this.social_agent, this.authorization_agent, new Date(), registeredAgent, hasAccessNeedGroup, data_authorizations)
     }
 
-    async newApplication(registeredAgentId: string) {
-        const webIdDoc = await readResource(this.session, registeredAgentId);
-        const dataset = await parseTurtle(webIdDoc);
-        const applicationProfileDocument = new ApplicationProfileDocument(registeredAgentId, dataset);
-        //const dataAuthorizations = this.createAccessAuthorization();
+    async newApplication(approval: Approval) {
+        // const applicationProfileDocument = await ApplicationProfileDocument.getRdfDocument(registeredAgentId, this.session.fetch);
+        // const accessNeedGroups = await applicationProfileDocument.gethasAccessNeedGroup(this.session.fetch);
+
+        let authorizationBuilders: AuthorizationBuilder[] = []
+
+        approval.access.forEach((dataAccessScopes, needGroup) => {
+            const authorizationBuilder = new AuthorizationBuilder(this, new ApplicationAgent(approval.applicationProfileDocument.uri))
+            dataAccessScopes.forEach(dataAccessScope => {
+                authorizationBuilder.createDataAuthorization(dataAccessScope)
+            });
+            authorizationBuilder.createAccessAuthorization(needGroup)
+        });
+
+        for (const authorizationBuilder of authorizationBuilders) {
+            authorizationBuilder.getCreatedDataAuthorizations().forEach(async data_authoriza => {
+                const turtle = await new RdfFactory().create(data_authoriza) as string // Error handling
+                insertTurtleResource(this.session, data_authoriza.id, turtle)
+            })
+
+            const access_authoriza = authorizationBuilder.getCreatedAccessAuthorization();
+            const turtle = await new RdfFactory().create(access_authoriza) as string // Error handling
+            insertTurtleResource(this.session, access_authoriza.id, turtle)
+
+        }
+
+
+
 
     }
 
@@ -144,22 +185,7 @@ export class AuthorizationAgent {
             hasAccessNeedGroup,
             dataAuthorizations);
     }
-    // createDataAuthorizations(applicationProfile: ApplicationProfileDocument, accessNeed: AccessNeed, scopeOfAuthorization: GrantScope): DataAuthorization {
-    //     const shapeTree = accessNeed.getRegistratedShapeTree();
-    //     return new DataAuthorization(
-    //         id,
-    //         this.social_agent,
-    //         new ApplicationAgent(applicationProfile.webId),
-    //         shapeTree,
-    //         this.getDataRegistration(shapeTree),
-    //         accessNeed.getAccessModes(),
-    //         scopeOfAuthorization,
-    //         accessNeed.id,
-    //         undefined,
-    //         accessNeed.getCreatorAccessMode(),
-    //         accessNeed.
-    //     );
-    // }
+
     getDataRegistration(shapeTree: string): DataRegistration {
         throw new Error("Method not implemented.");
     }

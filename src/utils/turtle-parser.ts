@@ -8,19 +8,24 @@ const { Store, Parser, DataFactory } = N3;
  * @param source
  */
 
-export async function parseTurtle(text: string): Promise<DatasetCore> {
-    const store = new Store();
-    return new Promise((resolve, reject) => {
-        const parser = new Parser();
-        parser.parse(text, (error: Error, quad: Quad) => {
-            if (error) {
-                reject(error);
-            }
-            if (quad) {
-                store.add(DataFactory.quad(quad.subject, quad.predicate, quad.object, DataFactory.defaultGraph()));
-            } else {
-                resolve(store);
-            }
-        });
+export const parseTurtle = async (text: string, source = ''): Promise<DatasetCore> => {
+  const store = new Store();
+  return new Promise((resolve, reject) => {
+    const parserOptions: { baseIRI?: string } = {};
+    if (source) {
+      parserOptions.baseIRI = source;
+    }
+    const parser = new Parser({ ...parserOptions });
+    parser.parse(text, (error: Error, quad: Quad) => {
+      if (error) {
+        reject(error);
+      }
+      if (quad) {
+        console.log(quad)
+        store.add(DataFactory.quad(quad.subject, quad.predicate, quad.object));
+      } else {
+        resolve(store);
+      }
     });
+  });
 };

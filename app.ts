@@ -17,6 +17,7 @@ import { ApplicationRegistration } from "solid-interoperability/src/data-managem
 import { ApplicationAgent, SocialAgent } from "solid-interoperability";
 import { createContainer, insertTurtleResource, readResource } from "./src/utils/modify-pod";
 import { serializeTurtle } from "./src/utils/turtle-serializer";
+import { parseTurtle } from "./src/utils/turtle-parser";
 
 config();
 const app = express();
@@ -145,6 +146,28 @@ if (useHttps) {
         console.log(`Server running at http://${hostname}:${port}/`);
     });
 }
+
+// const a = `@prefix foaf: <http://xmlns.com/foaf/0.1/>.
+// @prefix solid: <http://www.w3.org/ns/solid/terms#>.
+
+// <>
+//     a foaf:PersonalProfileDocument;
+//     foaf:maker <http://localhost:3000/bob-pod/profile/card#me>;
+//     foaf:primaryTopic <http://localhost:3000/bob-pod/profile/card#me>.
+
+// <http://localhost:3000/bob-pod/profile/card#me>
+    
+//     solid:oidcIssuer <http://localhost:3000/>;
+//     a foaf:Person.`
+
+// async function f() {
+//     const prefixes = {
+//         foaf: 'http://xmlns.com/foaf/0.1/',
+//         solid: 'http://www.w3.org/ns/solid/terms#',
+//       };
+// console.log(await serializeTurtle(await parseTurtle(a, "http://localhost:3000/bob-pod/profile/card#me"), prefixes))
+// }
+// f()
 
 const authorization_router = express.Router()
 app.use('/agents', authorization_router);

@@ -17,8 +17,8 @@ const trimNamedGraph = (dataset: DatasetCore): DatasetCore => {
  * @param trim Whether to trim the named graph off the dataset or not. If the dataset has a named graph and is not trimmed
  *             the serialization will be done in trig format instead of turtle.
  */
-export async function serializeTurtle(dataset: DatasetCore, prefixes : {}, trim = true): Promise<string> {
-  const writer = new Writer({ format: 'text/turtle' , prefixes : {...prefixes}});
+export async function serializeTurtle(dataset: DatasetCore, prefixes: {}, trim = true): Promise<string> {
+  const writer = new Writer({ format: 'text/turtle', prefixes: { ...prefixes } });
 
   for (const quad of trim ? trimNamedGraph(dataset) : dataset) {
     writer.addQuad(quad);

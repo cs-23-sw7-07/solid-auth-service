@@ -1,4 +1,4 @@
-import N3 from "n3";
+import N3, { NamedNode, Prefixes } from "n3";
 import { Session } from "@inrupt/solid-client-authn-node";
 import { parseTurtle } from "./utils/turtle-parser";
 import { serializeTurtle } from "./utils/turtle-serializer";
@@ -10,12 +10,13 @@ const { quad, namedNode, defaultGraph } = DataFactory
 const oidcIssuer_PREDICATE = "http://www.w3.org/ns/solid/terms#oidcIssuer"
 
 export class ProfileDocument {
-    constructor(public webId : string, public dataset : DatasetCore) {
+    constructor(public webId: string, public dataset: DatasetCore, public prefixes: Prefixes) {
         
     }
 
     static async getProfileDocument(webId: string): Promise<ProfileDocument> {
-        return new ProfileDocument(webId, await fetch(webId).then(res => res.text()).then(res => parseTurtle(res)))
+        let result = await fetch(webId).then(res => res.text()).then(res => parseTurtle(res, webId))
+        return new ProfileDocument(webId, result.dataset, result.prefixes)
     }
 
     hasAuthorizationAgent(authorization_uri: string): boolean {

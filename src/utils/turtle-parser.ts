@@ -2,9 +2,8 @@ import N3, { Prefixes, NamedNode } from "n3";
 import { Quad, DatasetCore } from '@rdfjs/types';
 const { Store, Parser, DataFactory } = N3;
 
-class ParserResult {
+export class ParserResult {
   constructor(public dataset: DatasetCore, public prefixes: Prefixes){
-
   }
 }
 

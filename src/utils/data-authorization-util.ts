@@ -1,5 +1,6 @@
 import { ApplicationAgent, DataAuthorization, GrantScope } from "solid-interoperability";
-import { AccessNeed, ApplicationProfileDocument } from "../application-profile-document";
+import { ApplicationProfileDocument } from "../RDF/application/application-profile-document";
+import { AccessNeed } from "../RDF/application/access-need";
 
 
     export function createDataAuthorizations(

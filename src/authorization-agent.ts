@@ -1,16 +1,20 @@
 import N3 from "n3";
 import { Session } from "@inrupt/solid-client-authn-node";
-import { createContainer, readResource, type_a, updateContainerResource } from "./utils/modify-pod";
+import { createContainer, insertTurtleResource, readResource, type_a, updateContainerResource } from "./utils/modify-pod";
 import { DatasetCore } from "@rdfjs/types";
 import { ProfileDocument } from "./profile-document";
 import { AccessAuthorization, AccessGrant, AccessMode, Agent, AgentRegistration, ApplicationAgent, ApplicationRegistration, DataAuthorization, DataRegistration, GrantScope, SocialAgent } from "solid-interoperability";
 import { RdfFactory } from "solid-interoperability";
 import { parseTurtle } from "./utils/turtle-parser";
 import { randomUUID } from "crypto";
-import { AccessNeed, ApplicationProfileDocument } from "./application-profile-document";
+import { ApplicationProfileDocument } from "./RDF/application/application-profile-document";
+import { AccessNeed } from "./RDF/application/access-need";
 import { serializeTurtle } from "./utils/turtle-serializer";
 import { createDataAuthorizations } from "./utils/data-authorization-util";
 import { access } from "fs";
+import { Approval } from "./RDF/application/approval";
+import { DataAuthorizationBuilder } from "./RDF/builder/data-authorizations-builder";
+import { AccessAuthorizationBuilder } from "./RDF/builder/access-authorization-builder";
 
 const { Store, DataFactory } = N3;
 const { namedNode } = DataFactory
@@ -88,25 +92,35 @@ export class AuthorizationAgent {
         return new AccessAuthorization(this.newId(this.AuthorizationRegistry_container), this.social_agent, this.authorization_agent, new Date(), registeredAgent, hasAccessNeedGroup, data_authorizations)
     }
 
-    async newApplication(registeredAgentId: string, scopeOfGrant: GrantScope) {
-        const webIdDoc = await readResource(this.session, registeredAgentId);
-        const dataset = await parseTurtle(webIdDoc);
-        const applicationProfileDocument = new ApplicationProfileDocument(registeredAgentId, dataset);
-        const accessNeedGroup = applicationProfileDocument.gethasAccessNeedGroup(); 
-        const data_authorizations: DataAuthorization[] = [];
-        if(!accessNeedGroup)
-            throw new Error("Undefined accessNeedGroup");
-        const accessNeeds: AccessNeed[] = await applicationProfileDocument.gethasAccessNeeds(this.session.fetch, accessNeedGroup);
-        accessNeeds.forEach(accessNeed => {
-            data_authorizations.push(createDataAuthorizations(applicationProfileDocument, accessNeed, scopeOfGrant, this));
+    async newApplication(approval: Approval) {
+        // const applicationProfileDocument = await ApplicationProfileDocument.getRdfDocument(registeredAgentId, this.session.fetch);
+        // const accessNeedGroups = await applicationProfileDocument.gethasAccessNeedGroup(this.session.fetch);
+
+        let access_builders: AccessAuthorizationBuilder[] = []
+
+        approval.access.forEach((dataAccessScopes, needGroup) => {
+            const data_builder = new DataAuthorizationBuilder(this)
+            dataAccessScopes.forEach(dataAccessScope => {
+                data_builder.createDataAuthorization(dataAccessScope)
+            });
+            const access_builder = new AccessAuthorizationBuilder(this, new ApplicationAgent(approval.applicationProfileDocument.uri), data_builder)
+            access_builder.createAccessAuthorization(needGroup)
         });
-        const hasAccessNeedGroup = "";
-        const accessAuthorization: AccessAuthorization = this.createAccessAuthorization(
-            applicationProfileDocument,
-            scopeOfGrant,
-            hasAccessNeedGroup,
-            dataAuthorizations
-        );
+
+        for (const access_builder of access_builders) {
+            access_builder.data_authorization_builder.getCreatedDataAuthorization().forEach(async data_authoriza => {
+                const turtle = await new RdfFactory().create(data_authoriza)
+                insertTurtleResource(this.session, data_authoriza.id, turtle)
+            })
+
+            access_builder.getCreatedAccessAuthorization().forEach(async access_authoriza => {
+                const turtle = await new RdfFactory().create(access_authoriza)
+                insertTurtleResource(this.session, access_authoriza.id, turtle)
+            })
+        }
+        
+        
+        
 
     }
 

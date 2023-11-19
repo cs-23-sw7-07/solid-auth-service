@@ -1,29 +1,32 @@
-// import { AccessAuthorization, Agent, DataAuthorization } from "solid-interoperability";
-// import { AuthorizationAgent } from "../../authorization-agent";
-// import { DataAccessScope } from "../application/data-access-scope";
-// import { AccessNeedGroup } from "../application/access-need-group";
+import { AccessAuthorization, Agent, DataAuthorization } from "solid-interoperability";
+import { AuthorizationAgent } from "../../authorization-agent";
+import { DataAccessScope } from "../application/data-access-scope";
+import { AccessNeedGroup } from "../application/access-need-group";
 
-// export class AuthorizationBuilder {
-//     data_authorizations: Map<string, DataAuthorization[]> = new Map<string, DataAuthorization[]>
-//     access_authorizations: AccessAuthorization[] = []
+export class AuthorizationBuilder {
+    private data_authorizations: Map<string, DataAuthorization[]> = new Map<string, DataAuthorization[]>
+    private access_authorizations: AccessAuthorization | undefined = undefined
 
-//     constructor(public authorizationAgent : AuthorizationAgent, public grantee: Agent){}
+    constructor(public authorizationAgent : AuthorizationAgent, public grantee: Agent){}
 
-//     newId(): string {
-//         return this.authorizationAgent.newId(this.authorizationAgent.AuthorizationRegistry_container)
-//     }
+    newId(): string {
+        return this.authorizationAgent.newId(this.authorizationAgent.AuthorizationRegistry_container)
+    }
 
-//     async createDataAuthorization(dataAccessScope: DataAccessScope) {
-//         const data_authorizations = await dataAccessScope.toDataAuthoization(this);
-//         this.data_authorizations.set(dataAccessScope.accessNeed.uri, data_authorizations)
-//     }
+    async createDataAuthorization(dataAccessScope: DataAccessScope) {
+        const data_authorizations = await dataAccessScope.toDataAuthoization(this);
+        this.data_authorizations.set(dataAccessScope.accessNeed.uri, data_authorizations)
+    }
 
-//     async createAccess(need_group: AccessNeedGroup, access_scope: DataAccessScope[]) {
-//         let
-//     }
+    getCreatedDataAuthorizations(): DataAuthorization[] {
+        return Array.from(this.data_authorizations.values()).flat()
+    }
 
-//     async createAccessAuthorization(access_need_group: AccessNeedGroup, data_authorization: DataAuthorization[]) {
-//         const access_authorization = await access_need_group.toAccessAuthorization(this.newId(), this.authorizationAgent, this.grantee, data_authorization);
-//         this.access_authorizations.push(access_authorization)
-//     }
-// }
+    async createAccessAuthorization(access_need_group: AccessNeedGroup) {
+        this.access_authorizations = await access_need_group.toAccessAuthorization(this.newId(), this.authorizationAgent, this.grantee, this.getCreatedDataAuthorizations());
+    }
+
+    getCreatedAccessAuthorization(): AccessAuthorization {
+        return this.access_authorizations!
+    }
+}

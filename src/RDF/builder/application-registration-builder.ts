@@ -43,7 +43,7 @@ export class AgentRegistrationBuilder {
 }
 
 export class GrantNeedGroupBuilder {
-    private data_grants: Map<DataAuthorization, DataGrant> = new Map<DataAuthorization, DataGrant>();
+    private data_grants: Map<DataAuthorization, DataGrant[]> = new Map<DataAuthorization, DataGrant[]>();
     private access_grant: AccessGrant | undefined = undefined
 
     constructor(private authorization_agent: AuthorizationAgent, private container: string){
@@ -66,12 +66,11 @@ export class GrantNeedGroupBuilder {
     }
 
     getDataGrants(): DataGrant[] {
-        return Array.from(this.data_grants.values())
+        return Array.from(this.data_grants.values()).flat()
     }
 
     createAccessGrant(access_authorization: AccessAuthorization) {
-        const data_grants = access_authorization.hasDataAuthorization.map(autho => this.data_grants.get(autho)!)
-        this.access_grant = access_authorization.toAccessGrant(this.newId(), data_grants)
+        this.access_grant = access_authorization.toAccessGrant(this.newId(), this.getDataGrants())
     }
 
     getAccessGrant(): AccessGrant {

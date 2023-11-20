@@ -7,28 +7,25 @@ export abstract class DataAccessScope {
 
     }
 
-    abstract toDataAuthoization(builder: AuthorizationBuilder): Promise<DataAuthorization[]>
+    abstract toDataAuthoization(builder: AuthorizationBuilder): Promise<DataAuthorization>
 }
 
 class DataAccessScopeAll extends DataAccessScope {
     constructor(accessNeed: AccessNeed, public dataOwnerWebId: string) {
         super(accessNeed)
     }
-
-    async toDataAuthoization(builder: AuthorizationBuilder): Promise<DataAuthorization[]> {
-        const data_registrations: DataRegistration[] = await builder.authorizationAgent.getAllDataRegistrations();
-        return data_registrations.map(data_registration =>
-            new DataAuthorization(
+    // const data_registrations: DataRegistration[] = await builder.authorizationAgent.getAllDataRegistrations();
+    async toDataAuthoization(builder: AuthorizationBuilder): Promise<DataAuthorization> {
+        return new DataAuthorization(
                 builder.newId(),
                 builder.authorizationAgent.social_agent,
                 this.accessNeed.getRegisteredShapeTree(),
-                data_registration,
                 this.accessNeed.getAccessModes(),
                 GrantScope.All,
                 this.accessNeed.uri,
                 undefined,
                 undefined,
                 this.accessNeed.getCreatorAccessModes(),
-            ))
+            )
     }
 }

@@ -10,8 +10,8 @@ export abstract class DataAccessScope {
     abstract toDataAuthoization(builder: AuthorizationBuilder): Promise<DataAuthorization[]>
 }
 
-class DataAccessScopeAll extends DataAccessScope {
-    constructor(accessNeed: AccessNeed, public dataOwnerWebId: string) {
+export class DataAccessScopeAll extends DataAccessScope {
+    constructor(accessNeed: AccessNeed) {
         super(accessNeed)
     }
 

@@ -18,6 +18,10 @@ import { ApplicationAgent, SocialAgent } from "solid-interoperability";
 import { createContainer, insertTurtleResource, readResource } from "./src/utils/modify-pod";
 import { serializeTurtle } from "./src/utils/turtle-serializer";
 import { parseTurtle } from "./src/utils/turtle-parser";
+import { Approval } from "./src/RDF/application/approval";
+import { ApplicationProfileDocument } from "./src/RDF/application/application-profile-document";
+import { DataAccessScope, DataAccessScopeAll } from "./src/RDF/application/data-access-scope";
+import { AccessNeedGroup } from "./src/RDF/application/access-need-group";
 
 config();
 const app = express();
@@ -267,12 +271,25 @@ authorization_router.head("/:webId", (req, res) => {
     }
 })
 
-authorization_router.get("/:webId/redirect", (req, res) => {
+authorization_router.get("/:webId/redirect", async (req, res) => {
     const authorization_agent: AuthorizationAgent = cache.get(authorizationAgentUrl2webId(req.params.webId))!
     const client_id: string = req.query.client_id as string;
-    const approval: boolean = accessApprovalHandler.requestAccessApproval();
-    if(approval){
-        authorization_agent.newApplication(client_id, accessApprovalHandler.getAccessScope());
+    const approved: boolean = accessApprovalHandler.requestAccessApproval();
+    const fetch = authorization_agent.session.fetch;
+
+    if(approved){
+        const applicationProfileDocument = await ApplicationProfileDocument.getRdfDocument(client_id, fetch);
+        const access = new Map<AccessNeedGroup, DataAccessScope[]>();
+        
+        (await applicationProfileDocument.gethasAccessNeedGroup(fetch)).forEach(async accesNeedGroup => {
+            const dataAccessScopes: DataAccessScopeAll[] = [];
+            (await accesNeedGroup.getHasAccessNeed(fetch)).forEach(accessNeed => {
+                dataAccessScopes.push(new DataAccessScopeAll(accessNeed));
+            })
+            access.set(accesNeedGroup, dataAccessScopes);
+        });
+        
+        authorization_agent.newApplication(accessApprovalHandler.getApprovalStatus(applicationProfileDocument, access));
         res.status(202).send();
     }
     else{

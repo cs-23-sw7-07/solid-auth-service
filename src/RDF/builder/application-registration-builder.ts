@@ -1,6 +1,6 @@
 import { randomUUID } from "crypto";
 import { AuthorizationAgent } from "../../authorization-agent";
-import { AccessAuthorization, AccessGrant, Agent, AgentRegistration, ApplicationAgent, ApplicationRegistration, DataAuthorization, DataGrant, Fetch, RdfFactory } from "solid-interoperability";
+import { AccessAuthorization, AccessGrant, Agent, AgentRegistration, ApplicationAgent, ApplicationRegistration, DataAuthorization, DataGrant, DataRegistration, Fetch, IDataGrantBuilder, RdfFactory } from "solid-interoperability";
 import { AuthorizationBuilder } from "./authorization-builder";
 import { insertTurtleResource, updateContainerResource } from "../../utils/modify-pod";
 import { Session } from "@inrupt/solid-client-authn-node";
@@ -43,7 +43,7 @@ export class AgentRegistrationBuilder {
 }
 
 export class GrantNeedGroupBuilder {
-    private data_grants: Map<DataAuthorization, DataGrant> = new Map<DataAuthorization, DataGrant>();
+    private data_grants: Map<DataAuthorization, DataGrant[]> = new Map<DataAuthorization, DataGrant[]>();
     private access_grant: AccessGrant | undefined = undefined
 
     constructor(private authorization_agent: AuthorizationAgent, private container: string){
@@ -56,22 +56,16 @@ export class GrantNeedGroupBuilder {
 
     createDataGrants(data_authorizations: DataAuthorization[]) {
         for (const auth of data_authorizations) {
-            if (auth.inheritsFromAuthorization) {
-                this.data_grants.set(auth, auth.toDataGrant(this.newId(), this.data_grants.get(auth.inheritsFromAuthorization)))
-            }
-            else {
-                this.data_grants.set(auth, auth.toDataGrant(this.newId()))
-            }
+                this.data_grants.set(auth, auth.toDataGrant(this.authorization_agent))
         }
     }
 
     getDataGrants(): DataGrant[] {
-        return Array.from(this.data_grants.values())
+        return Array.from(this.data_grants.values()).flat()
     }
 
     createAccessGrant(access_authorization: AccessAuthorization) {
-        const data_grants = access_authorization.hasDataAuthorization.map(autho => this.data_grants.get(autho)!)
-        this.access_grant = access_authorization.toAccessGrant(this.newId(), data_grants)
+        this.access_grant = access_authorization.toAccessGrant(this.newId(), this.getDataGrants())
     }
 
     getAccessGrant(): AccessGrant {

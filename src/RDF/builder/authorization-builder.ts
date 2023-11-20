@@ -4,7 +4,7 @@ import { DataAccessScope } from "../application/data-access-scope";
 import { AccessNeedGroup } from "../application/access-need-group";
 
 export class AuthorizationBuilder {
-    private data_authorizations: Map<string, DataAuthorization[]> = new Map<string, DataAuthorization[]>
+    private data_authorizations: Map<string, DataAuthorization> = new Map<string, DataAuthorization>
     private access_authorizations: AccessAuthorization | undefined = undefined
 
     constructor(public authorizationAgent : AuthorizationAgent, public grantee: Agent){}

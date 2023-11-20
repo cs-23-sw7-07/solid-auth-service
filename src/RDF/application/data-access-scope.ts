@@ -1,4 +1,4 @@
-import { DataAuthorization, DataRegistration, GrantScope } from "solid-interoperability";
+import { DataAuthorization, DataAuthorizationAll, DataRegistration, GrantScope } from "solid-interoperability";
 import { AccessNeed } from "./access-need";
 import { AuthorizationBuilder } from "../builder/authorization-builder";
 
@@ -7,7 +7,7 @@ export abstract class DataAccessScope {
 
     }
 
-    abstract toDataAuthoization(builder: AuthorizationBuilder): Promise<DataAuthorization[]>
+    abstract toDataAuthoization(builder: AuthorizationBuilder): Promise<DataAuthorization>
 }
 
 export class DataAccessScopeAll extends DataAccessScope {
@@ -15,20 +15,14 @@ export class DataAccessScopeAll extends DataAccessScope {
         super(accessNeed)
     }
 
-    async toDataAuthoization(builder: AuthorizationBuilder): Promise<DataAuthorization[]> {
-        const data_registrations: DataRegistration[] = await builder.authorizationAgent.getAllDataRegistrations();
-        return data_registrations.map(data_registration =>
-            new DataAuthorization(
-                builder.newId(),
-                builder.authorizationAgent.social_agent,
-                this.accessNeed.getRegisteredShapeTree(),
-                data_registration,
-                this.accessNeed.getAccessModes(),
-                GrantScope.All,
-                this.accessNeed.uri,
-                undefined,
-                undefined,
-                this.accessNeed.getCreatorAccessModes(),
-            ))
+    async toDataAuthoization(builder: AuthorizationBuilder): Promise<DataAuthorization> {
+        return new DataAuthorizationAll(
+            builder.newId(),
+            builder.authorizationAgent.social_agent,
+            this.accessNeed.getRegisteredShapeTree(),
+            this.accessNeed.getAccessModes(),
+            this.accessNeed.uri,
+            this.accessNeed.getCreatorAccessModes(),
+        )
     }
 }

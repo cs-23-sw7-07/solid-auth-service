@@ -340,4 +340,14 @@ pods_router.put("/:dataId/:webId", async (req, res) => {
     }
 });
 
+pods_router.get("/:dataIRI/:webId", async (req, res) => {
+    const dataIRI: string = req.params.dataIRI;
+    const authorizationAgent: AuthorizationAgent | undefined = cache.get(req.params.webId);
+    readResource(authorizationAgent!.session, dataIRI).then((data) => {
+        res.status(200).send(data);
+    }).catch((error) => {
+        res.status(500).json({ error: "Internal Server Error" });
+    });
+})
+
 export { app };

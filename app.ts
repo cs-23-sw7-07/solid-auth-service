@@ -10,16 +10,16 @@ import * as fs from "fs";
 import * as https from "https";
 import { AuthorizationAgent } from "./src/authorization-agent";
 import { getPodUrlAll } from "@inrupt/solid-client";
-import { ProfileDocument } from "./src/profile-document";
+import { SocialAgentProfileDocument } from "./src/profile-documents/social-agent-profile-document";
 import { authorizationAgentUrl2webId, webId2AuthorizationAgentUrl } from "./src/utils/uri-convert";
 import { AccessApprovalHandler } from "./src/handlers/AccessApprovalHandler";
 import { ApplicationRegistration } from "solid-interoperability/src/data-management/data-model/agent-registration/application-registration"
 import { ApplicationAgent, SocialAgent } from "solid-interoperability";
 import { insertTurtleResource, readResource } from "./src/utils/modify-pod";
 import { serializeTurtle } from "./src/utils/turtle-serializer";
-import { ApplicationProfileDocument } from "./src/RDF/application/application-profile-document";
-import { DataAccessScope, DataAccessScopeAll } from "./src/RDF/application/data-access-scope";
-import { AccessNeedGroup } from "./src/RDF/application/access-need-group";
+import { ApplicationProfileDocument } from "./src/profile-documents/application-profile-document";
+import { DataAccessScope, DataAccessScopeAll } from "./src/application/data-access-scope";
+import { AccessNeedGroup } from "./src/application/access-need-group";
 import Link from "http-link-header";
 
 config();
@@ -220,7 +220,7 @@ authorization_router.get("/new/callback", async (req, res) => {
     // 5. `session` now contains an authenticated Session instance.
     const webId = session!.info.webId!
     const agent_URI = webId2AuthorizationAgentUrl(webId)
-    const profile_document: ProfileDocument = await ProfileDocument.getProfileDocument(webId)
+    const profile_document: SocialAgentProfileDocument = await SocialAgentProfileDocument.getProfileDocument(webId)
 
     if (!profile_document.hasAuthorizationAgent(agent_URI)) {
         profile_document.addhasAuthorizationAgent(agent_URI)

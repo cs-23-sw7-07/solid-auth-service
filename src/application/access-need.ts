@@ -1,6 +1,6 @@
 import { AccessMode, Fetch, getAccessmode } from "solid-interoperability";
 import { RdfDocument } from "../rdf-document";
-import { INTEROP } from "../../namespace";
+import { INTEROP } from "../namespace";
 
 export class AccessNeed extends RdfDocument {
   constructor(uri: string) {

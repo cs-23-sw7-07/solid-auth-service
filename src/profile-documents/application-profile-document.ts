@@ -1,7 +1,7 @@
 import { Fetch, SocialAgent } from "solid-interoperability";
 import { RdfDocument } from "../rdf-document";
-import { INTEROP } from "../../namespace";
-import { AccessNeedGroup } from "./access-need-group";
+import { INTEROP } from "../namespace";
+import { AccessNeedGroup } from "../application/access-need-group";
 
 export class ApplicationProfileDocument extends RdfDocument {
   constructor(uri: string) {

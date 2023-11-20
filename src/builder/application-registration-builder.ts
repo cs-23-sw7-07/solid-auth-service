@@ -1,5 +1,5 @@
 import { randomUUID } from "crypto";
-import { AuthorizationAgent } from "../../authorization-agent";
+import { AuthorizationAgent } from "../authorization-agent";
 import {
   AccessAuthorization,
   AccessGrant,
@@ -17,9 +17,9 @@ import { AuthorizationBuilder } from "./authorization-builder";
 import {
   insertTurtleResource,
   updateContainerResource,
-} from "../../utils/modify-pod";
+} from "../utils/modify-pod";
 import { Session } from "@inrupt/solid-client-authn-node";
-import { parseTurtle } from "../../utils/turtle-parser";
+import { parseTurtle } from "../utils/turtle-parser";
 
 export class AgentRegistrationBuilder {
   private data_grants: DataGrant[] = [];

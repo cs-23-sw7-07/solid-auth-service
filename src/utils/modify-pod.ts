@@ -1,20 +1,6 @@
-import LinkHeader from "http-link-header";
-import N3 from "n3";
 import { Session } from "@inrupt/solid-client-authn-node";
 import { DatasetCore } from "@rdfjs/types";
 import { serializeTurtle } from "./turtle-serializer";
-import { parseTurtle } from "./turtle-parser";
-
-const { Store, Parser, DataFactory } = N3;
-const { namedNode } = DataFactory;
-
-export const type_a = namedNode(
-  "http://www.w3.org/1999/02/22-rdf-syntax-ns#type",
-);
-
-// const getItemName = (url: string) => {
-//     return url.substr(url.lastIndexOf('/') + 1)
-//   }
 
 export async function insertTurtleResource(
   session: Session,
@@ -89,12 +75,6 @@ export async function updateContainerResource(
   }
 }
 
-class ContainerInfo {
-  constructor(
-    public containers: string[],
-    public resources: string[],
-  ) {}
-}
 
 export function readResource(session: Session, url: string): Promise<string> {
   return session.fetch(url).then((res) => res.text());

@@ -3,7 +3,7 @@ import {
   Agent,
   DataAuthorization,
 } from "solid-interoperability";
-import { AuthorizationAgent } from "../../authorization-agent";
+import { AuthorizationAgent } from "../authorization-agent";
 import { DataAccessScope } from "../application/data-access-scope";
 import { AccessNeedGroup } from "../application/access-need-group";
 

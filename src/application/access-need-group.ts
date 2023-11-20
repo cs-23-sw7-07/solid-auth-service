@@ -5,9 +5,9 @@ import {
   Fetch,
 } from "solid-interoperability";
 import { RdfDocument } from "../rdf-document";
-import { INTEROP } from "../../namespace";
+import { INTEROP } from "../namespace";
 import { AccessNeed } from "./access-need";
-import { AuthorizationAgent } from "../../authorization-agent";
+import { AuthorizationAgent } from "../authorization-agent";
 
 export class AccessNeedGroup extends RdfDocument {
   constructor(uri: string) {

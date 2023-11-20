@@ -1,13 +1,14 @@
 import N3 from "n3";
 import { Session } from "@inrupt/solid-client-authn-node";
+import { randomUUID } from "crypto";
 import {
   createContainer,
   insertTurtleResource,
   readResource,
-  type_a,
   updateContainerResource,
 } from "./utils/modify-pod";
-import { ProfileDocument } from "./profile-document";
+import { type_a, INTEROP} from "./namespace";
+import { SocialAgentProfileDocument } from "./profile-documents/social-agent-profile-document";
 import {
   AccessAuthorization,
   AgentRegistration,
@@ -15,19 +16,15 @@ import {
   ApplicationRegistration,
   DataAuthorization,
   DataRegistration,
-  IDataGrantBuilder,
   NotImplementedYet,
+  RdfFactory,
   SocialAgent,
-  SocialAgentRegistration,
 } from "solid-interoperability";
-import { RdfFactory } from "solid-interoperability";
 import { parseTurtle } from "./utils/turtle-parser";
-import { randomUUID } from "crypto";
-import { Approval } from "./RDF/application/approval";
-import { AuthorizationBuilder } from "./RDF/builder/authorization-builder";
-import { AgentRegistrationBuilder } from "./RDF/builder/application-registration-builder";
-import { RdfDocument } from "./RDF/rdf-document";
-import { INTEROP } from "./namespace";
+import { Approval } from "./application/approval";
+import { AuthorizationBuilder } from "./builder/authorization-builder";
+import { AgentRegistrationBuilder } from "./builder/application-registration-builder";
+import { RdfDocument } from "./rdf-document";
 
 const { Store, DataFactory } = N3;
 const { namedNode } = DataFactory;
@@ -57,8 +54,8 @@ export class AuthorizationAgent {
     createContainer(this.session, this.AuthorizationRegistry_container);
     createContainer(this.session, this.DataRegistry_container);
 
-    const profile_document: ProfileDocument =
-      await ProfileDocument.getProfileDocument(this.social_agent.webID);
+    const profile_document: SocialAgentProfileDocument =
+      await SocialAgentProfileDocument.getProfileDocument(this.social_agent.webID);
     await profile_document.updateProfile(this.session);
 
     const registries_store = new Store();

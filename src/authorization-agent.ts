@@ -29,9 +29,6 @@ export class AuthorizationAgent implements IDataGrantBuilder {
         this.AuthorizationRegistry_container = this.pod + "Registries/accessregisties/"
         this.DataRegistry_container = this.pod + "data/"
     }
-    getAllRegistrations(): Promise<DataRegistration[] | Error> {
-        throw new Error("Method not implemented.");
-    }
 
     async createRegistriesSet() {
         createContainer(this.session, this.registries_container)
@@ -61,30 +58,6 @@ export class AuthorizationAgent implements IDataGrantBuilder {
         return uri + randomUUID()
     }
 
-    // async newDataAuthorization(
-    //     grantee: Agent,
-    //     registeredShapeTree: string,
-    //     accessMode: AccessMode[],
-    //     scopeOfAuthorization: GrantScope,
-    //     satisfiesAccessNeed: string,
-    //     hasDataInstanceIRIs?: string[],
-    //     creatorAccessMode?: AccessMode[],
-    //     inheritsFromAuthorization?: DataAuthorization) {
-    //     const data_registration = await this.findDataRegistration(registeredShapeTree)
-    //     return new DataAuthorization(
-    //         this.newId(this.AuthorizationRegistry_container),
-    //         this.social_agent,
-    //         grantee,
-    //         registeredShapeTree,
-    //         data_registration,
-    //         accessMode,
-    //         scopeOfAuthorization,
-    //         satisfiesAccessNeed,
-    //         hasDataInstanceIRIs,
-    //         creatorAccessMode,
-    //         inheritsFromAuthorization)
-    // }
-
     async newAccessAuthorization(registeredAgent: ApplicationAgent, hasAccessNeedGroup: string, data_authorizations: DataAuthorization[]) {
         return new AccessAuthorization(this.newId(this.AuthorizationRegistry_container), this.social_agent, this.authorization_agent, new Date(), registeredAgent, hasAccessNeedGroup, data_authorizations)
     }
@@ -93,7 +66,7 @@ export class AuthorizationAgent implements IDataGrantBuilder {
 
         let authorizationBuilders: AuthorizationBuilder[] = []
         approval.access.forEach((dataAccessScopes, needGroup) => {
-            const authorizationBuilder = new AuthorizationBuilder(this, new ApplicationAgent(approval.applicationProfileDocument.uri))
+            const authorizationBuilder = new AuthorizationBuilder(this, approval.agent)
             dataAccessScopes.forEach(dataAccessScope => {
                 authorizationBuilder.createDataAuthorization(dataAccessScope)
             });
@@ -114,11 +87,9 @@ export class AuthorizationAgent implements IDataGrantBuilder {
 
         }
 
-        // const builder = new AgentRegistrationBuilder(this)
-        // builder.build()
-
-
-
+        const builder = new AgentRegistrationBuilder(this)
+        builder.build(approval.agent, authorizationBuilders)
+        builder.storeToPod()
     }
 
     // async addApplicationRegistration(registeredAgent: ApplicationAgent, hasAccessGrant: AccessGrant) {
@@ -139,20 +110,22 @@ export class AuthorizationAgent implements IDataGrantBuilder {
         throw new ApplicationRegistrationNotExist()
     }
 
+    getAllRegistrations(): Promise<DataRegistration[] | Error> {
+        return readResource(this.session, this.DataRegistry_container)
+            .then(turtle => parseTurtle(turtle, this.DataRegistry_container))
+            .then(async parse_result => {
+                const dataset = parse_result.dataset
+                let registration: DataRegistration[] = []
+                const rdf_creater = new RdfFactory()
+                const data_registration_predicate = "http://www.w3.org/ns/solid/interop#hasDataRegistration";
+                for (const quad of dataset.match(null, namedNode(data_registration_predicate))) {
+                    registration.push(await rdf_creater.parse(this.session.fetch, quad.object.value)
+                        .then(DataRegistration.makeDataRegistration)
+                        .catch(e => { throw e }))
+                }
 
-
-    async getAllDataRegistrations(): Promise<DataRegistration[]> {
-        const dataset = (await readResource(this.session, this.DataRegistry_container).then(turtle => parseTurtle(turtle, this.DataRegistry_container))).dataset
-        let registration: DataRegistration[] = []
-        const rdf_creater = new RdfFactory()
-        const data_registration_predicate = "http://www.w3.org/ns/solid/interop#hasDataRegistration";
-        for (const quad of dataset.match(null, namedNode(data_registration_predicate))) {
-            registration.push(await rdf_creater.parse(this.session.fetch, quad.object.value)
-                .then(DataRegistration.makeDataRegistration)
-                .catch(e => { throw e }))
-        }
-
-        return registration
+                return registration
+            })
     }
 
     findDataRegistration(shapeTree: string): Promise<DataRegistration> {

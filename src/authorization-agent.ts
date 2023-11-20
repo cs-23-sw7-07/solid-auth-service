@@ -29,6 +29,9 @@ export class AuthorizationAgent implements IDataGrantBuilder {
         this.AuthorizationRegistry_container = this.pod + "Registries/accessregisties/"
         this.DataRegistry_container = this.pod + "data/"
     }
+    getAllRegistrations(): Promise<DataRegistration[] | Error> {
+        throw new Error("Method not implemented.");
+    }
 
     async createRegistriesSet() {
         createContainer(this.session, this.registries_container)
@@ -111,7 +114,8 @@ export class AuthorizationAgent implements IDataGrantBuilder {
 
         }
 
-        // const builder = new AgentRegistrationBuilder
+        // const builder = new AgentRegistrationBuilder(this)
+        // builder.build()
 
 
 
@@ -135,9 +139,6 @@ export class AuthorizationAgent implements IDataGrantBuilder {
         throw new ApplicationRegistrationNotExist()
     }
 
-    getAllRegistrations(): DataRegistration[] {
-        throw new Error("Method not implemented.");
-    }
 
 
     async getAllDataRegistrations(): Promise<DataRegistration[]> {

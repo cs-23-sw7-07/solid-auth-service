@@ -340,6 +340,9 @@ pods_router.put("/:dataId/:webId", async (req, res) => {
     }
 });
 
+/*
+Endpoint for getting data from the Pod
+*/
 pods_router.get("/:dataIRI/:webId", async (req, res) => {
     const dataIRI: string = req.params.dataIRI;
     const authorizationAgent: AuthorizationAgent | undefined = cache.get(req.params.webId);

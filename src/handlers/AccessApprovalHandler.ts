@@ -6,21 +6,23 @@ import { AccessNeedGroup } from "../RDF/application/access-need-group";
 import { DataAccessScope } from "../RDF/application/data-access-scope";
 
 export class AccessApprovalHandler implements IAccessApproval {
-    getAccessScope(): GrantScope {
-        return GrantScope.All;
-    }
-    private isAccessGranted: boolean = true;
+  getAccessScope(): GrantScope {
+    return GrantScope.All;
+  }
+  private isAccessGranted: boolean = true;
 
-    requestAccessApproval(): boolean {
-        return this.isAccessGranted;
-    }
-    setGrantingStatus(value: boolean) {
-        this.isAccessGranted = value;
-    }
-    getApprovalStatus(applicationProfileDocument: ApplicationProfileDocument, access: Map<AccessNeedGroup, DataAccessScope[]>): Approval {
-        if (this.isAccessGranted)
-            return new Approval(applicationProfileDocument, access);
-        else
-            throw Error('Undefined approval status.')
-    }
+  requestAccessApproval(): boolean {
+    return this.isAccessGranted;
+  }
+  setGrantingStatus(value: boolean) {
+    this.isAccessGranted = value;
+  }
+  getApprovalStatus(
+    applicationProfileDocument: ApplicationProfileDocument,
+    access: Map<AccessNeedGroup, DataAccessScope[]>,
+  ): Approval {
+    if (this.isAccessGranted)
+      return new Approval(applicationProfileDocument, access);
+    else throw Error("Undefined approval status.");
+  }
 }

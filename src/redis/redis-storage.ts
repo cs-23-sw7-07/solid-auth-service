@@ -1,6 +1,6 @@
-import type { IStorage } from '@inrupt/solid-client-authn-node';
-import { Redis } from 'ioredis';
-import { RedisConnectionInfo } from './redis-connection-info';
+import type { IStorage } from "@inrupt/solid-client-authn-node";
+import { Redis } from "ioredis";
+import { RedisConnectionInfo } from "./redis-connection-info";
 
 export class RedisSolidStorage implements IStorage {
   private client;
@@ -30,7 +30,7 @@ export class RedisSolidStorage implements IStorage {
   async set(key: string, value: string): Promise<void> {
     try {
       const result = await this.client.set(key, value);
-      if (result === 'OK') return;
+      if (result === "OK") return;
     } catch (e) {}
   }
 }

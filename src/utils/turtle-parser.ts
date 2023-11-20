@@ -1,18 +1,28 @@
 import N3, { Prefixes, NamedNode } from "n3";
-import { Quad, DatasetCore } from '@rdfjs/types';
+import { Quad, DatasetCore } from "@rdfjs/types";
 const { Store, Parser, DataFactory } = N3;
 
+/**
+ * The result of parseTurtle function.
+ * @field dataset contains the quads of the parsed resource
+ * @field prefixes contains the prefixes of the parsed resource
+ */
 export class ParserResult {
-  constructor(public dataset: DatasetCore, public prefixes: Prefixes){
-  }
+  constructor(
+    public dataset: DatasetCore,
+    public prefixes: Prefixes,
+  ) {}
 }
 
 /**
  * Wrapper around N3.Parser.parse to convert from callback style to Promise.
- * @param text Text to parse. Either Turtle, N-Triples or N-Quads.
- * @param source
+ * @param text turtle text to parse.
+ * @param source the IRI of the resource to parse.
  */
-export const parseTurtle = async (text: string, source = ''): Promise<ParserResult> => {
+export const parseTurtle = async (
+  text: string,
+  source = "",
+): Promise<ParserResult> => {
   const store = new Store();
   return new Promise((resolve, reject) => {
     const parserOptions: { baseIRI?: string } = {};
@@ -23,9 +33,7 @@ export const parseTurtle = async (text: string, source = ''): Promise<ParserResu
     parser.parse(text, (error: Error, quad: Quad, parse: Prefixes) => {
       if (error) {
         reject(error);
-      }
-      if (quad) {
-        console.log(quad)
+      } else if (quad) {
         store.add(DataFactory.quad(quad.subject, quad.predicate, quad.object));
       } else {
         resolve(new ParserResult(store, parse));

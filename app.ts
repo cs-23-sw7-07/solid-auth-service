@@ -257,21 +257,24 @@ authorization_router.get("/:webId", (req, res) => {
     // return turtle document with the redirecct endpoints
 })
 
-// return the agent registration of the requesting application agent
+// return the agent registration of the requesting application agent as JSON
 authorization_router.head("/:webId", (req, res) => {
     const authorization_agent: AuthorizationAgent = cache.get(authorizationAgentUrl2webId(req.params.webId))!
     const client_id : string = req.query.client_id as string
-    console.log(client_id)
     const registration : ApplicationRegistration | undefined = authorization_agent.findApplicationRegistration(client_id)
     if (registration) {
-
+        res.status(200).send(JSON.stringify(registration));
     }
     else {
-        res.status(400)
+        res.status(400).send("No registration found for this WebId: "+req.params.webId);
     }
 })
 
 authorization_router.get("/:webId/redirect", async (req, res) => {
+    throw new Error('Not implemented yet');
+})
+
+authorization_router.post("/:webId/result", async (req, res) => {
     const authorization_agent: AuthorizationAgent = cache.get(authorizationAgentUrl2webId(req.params.webId))!
     const client_id: string = req.query.client_id as string;
     const approved: boolean = accessApprovalHandler.requestAccessApproval();
@@ -295,12 +298,6 @@ authorization_router.get("/:webId/redirect", async (req, res) => {
     else{
         res.status(403).send('Your request got rejected');
     }
-})
-
-authorization_router.post("/:webId/result", (req, res) => {
-    const authorization_agent: AuthorizationAgent = cache.get(authorizationAgentUrl2webId(req.params.webId))!
-    const client_id = req.query.client_id
-    // return the page where the user can approve or reject access
 })
 
 export { app };

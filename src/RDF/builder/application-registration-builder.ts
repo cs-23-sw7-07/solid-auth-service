@@ -1,6 +1,6 @@
 import { randomUUID } from "crypto";
 import { AuthorizationAgent } from "../../authorization-agent";
-import { AccessAuthorization, AccessGrant, Agent, AgentRegistration, ApplicationAgent, ApplicationRegistration, DataAuthorization, DataGrant, DataRegistration, Fetch, IDataGrantBuilder, RdfFactory } from "solid-interoperability";
+import { AccessAuthorization, AccessGrant, Agent, AgentRegistration, ApplicationRegistration, DataAuthorization, DataGrant, RdfFactory } from "solid-interoperability";
 import { AuthorizationBuilder } from "./authorization-builder";
 import { insertTurtleResource, updateContainerResource } from "../../utils/modify-pod";
 import { Session } from "@inrupt/solid-client-authn-node";
@@ -39,6 +39,10 @@ export class AgentRegistrationBuilder {
         this.access_grants.forEach(async grant => insertTurtleResource(session, grant.id, await factory.create(grant)! as string))
         const registration_turtle = await factory.create(this.registration!)! as string
         updateContainerResource(session, this.registration!.id + ".meta", (await parseTurtle(registration_turtle, this.registration!.id)).dataset)
+    }
+
+    getAgentRegistration(): AgentRegistration {
+        return this.registration!;
     }
 }
 

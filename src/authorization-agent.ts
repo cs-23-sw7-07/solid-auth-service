@@ -2,13 +2,15 @@ import N3 from "n3";
 import { Session } from "@inrupt/solid-client-authn-node";
 import { createContainer, insertTurtleResource, readResource, type_a, updateContainerResource } from "./utils/modify-pod";
 import { ProfileDocument } from "./profile-document";
-import { AccessAuthorization, AccessGrant, AgentRegistration, ApplicationAgent, ApplicationRegistration, DataAuthorization, DataRegistration, IDataGrantBuilder, SocialAgent } from "solid-interoperability";
+import { AccessAuthorization, AgentRegistration, ApplicationAgent, ApplicationRegistration, DataAuthorization, DataRegistration, IDataGrantBuilder, NotImplementedYet, SocialAgent, SocialAgentRegistration } from "solid-interoperability";
 import { RdfFactory } from "solid-interoperability";
 import { parseTurtle } from "./utils/turtle-parser";
 import { randomUUID } from "crypto";
 import { Approval } from "./RDF/application/approval";
 import { AuthorizationBuilder } from "./RDF/builder/authorization-builder";
 import { AgentRegistrationBuilder } from "./RDF/builder/application-registration-builder";
+import { RdfDocument } from "./RDF/rdf-document";
+import { INTEROP } from "./namespace";
 
 const { Store, DataFactory } = N3;
 const { namedNode } = DataFactory
@@ -46,12 +48,6 @@ export class AuthorizationAgent implements IDataGrantBuilder {
         registries_store.addQuad(namedNode(this.registries_container), namedNode("interop:hasDataRegistry"), namedNode(this.DataRegistry_container))
 
         await updateContainerResource(this.session, this.registries_container + ".meta", registries_store)
-
-        // console.log("INSERT DOCUMENT")
-        // await insertTurtleResource(this.session, this.registries_container + "testtesttestabbbb", await serializeTurtle(profile_document.dataset, { "interop": "http://www.w3.org/ns/solid/interop#" }))
-        // console.log("INSERTED DOCUMENT")
-        // console.log("READ DOCUMENT")
-        // console.log(await readContainer(this.session, this.registries_container + "testtesttestabbbb"))
     }
 
     newId(uri: string) {
@@ -63,7 +59,6 @@ export class AuthorizationAgent implements IDataGrantBuilder {
     }
 
     async newApplication(approval: Approval) {
-
         let authorizationBuilders: AuthorizationBuilder[] = []
         approval.access.forEach((dataAccessScopes, needGroup) => {
             const authorizationBuilder = new AuthorizationBuilder(this, approval.agent)
@@ -85,32 +80,50 @@ export class AuthorizationAgent implements IDataGrantBuilder {
             const turtle = await new RdfFactory().create(access_authoriza) as string // Error handling
             insertTurtleResource(this.session, access_authoriza.id, turtle)
 
+            const AuthorizationRegistry_store = new Store();
+            AuthorizationRegistry_store.addQuad(namedNode(this.AuthorizationRegistry_container), namedNode("interop:hasAccessAuthorization"), namedNode(access_authoriza.id))
+            await updateContainerResource(this.session, this.AuthorizationRegistry_container + ".meta", AuthorizationRegistry_store)
         }
 
         const builder = new AgentRegistrationBuilder(this)
         builder.build(approval.agent, authorizationBuilders)
-        builder.storeToPod()
+        builder.storeToPod()        
+
+        const predicate = approval.agent instanceof ApplicationAgent ? "interop:hasApplicationRegistration" : "interop:hasSocialAgentRegistration"
+        const AgentRegistry_store = new Store();
+        AgentRegistry_store.addQuad(namedNode(this.AgentRegistry_container), namedNode(predicate), namedNode(builder.getAgentRegistration().id))
+        await updateContainerResource(this.session, this.AgentRegistry_container + ".meta", AgentRegistry_store)
     }
 
-    // async addApplicationRegistration(registeredAgent: ApplicationAgent, hasAccessGrant: AccessGrant) {
-    //     const registration = new ApplicationRegistration(this.AgentRegistry_container + randomUUID() + "/", this.social_agent, this.authorization_agent, new Date(), new Date(), registeredAgent, hasAccessGrant);
-    //     createContainer(this.session, registration.id)
-    //     const turtle = await new RdfFactory().create(registration) as string
-    //     updateContainerResource(this.session, registration.id + ".meta", ((await parseTurtle(turtle, registration.id)).dataset))
-    // }
+    async findRegistration(client_id: string): Promise<AgentRegistration> {
+        const parse_result = await parseTurtle(await readResource(this.session, this.AgentRegistry_container), this.AgentRegistry_container)
+        const agent_registry_set = new RdfDocument(this.AgentRegistry_container, parse_result.dataset, parse_result.prefixes)
+        const type = agent_registry_set.getObjectValueFromPredicate("http://www.w3.org/1999/02/22-rdf-syntax-ns#type")
 
-    // async addAccessAuthorization(registeredAgent: ApplicationAgent, hasAccessGrant: AccessGrant) {
-    //     const registration = new ApplicationRegistration(this.AgentRegistry_container + randomUUID() + "/", this.social_agent, this.authorization_agent, new Date(), new Date(), registeredAgent, hasAccessGrant);
-    //     createContainer(this.session, registration.id)
-    //     const turtle = await new RdfFactory().create(registration) as string
-    //     updateContainerResource(this.session, registration.id + ".meta", ((await parseTurtle(turtle, registration.id)).dataset))
-    // }
+        const registration_type = (type == INTEROP + "Application") ? "hasApplicationRegistration" : "hasSocialAgentRegistration"
 
-    findApplicationRegistration(client_id: string): AgentRegistration | undefined {
+        const registrations_iri = agent_registry_set.getObjectValuesFromPredicate(INTEROP + registration_type)
+
+        const factory = new RdfFactory();
+        const rdfs = registrations_iri?.map(async iri => await factory.parse(this.session.fetch, await readResource(this.session, iri)))
+
+        let agent_registration = []
+        if (type == INTEROP + "Application") {
+            agent_registration = rdfs!.map(async rdf => ApplicationRegistration.makeApplicationRegistration(await rdf))
+        }
+        else {
+            throw new NotImplementedYet()
+        }
+
+        for (const reg of agent_registration) {
+            if ((await reg).registeredAgent.webID == client_id)
+                return reg
+        }
+
         throw new ApplicationRegistrationNotExist()
     }
 
-    getAllRegistrations(): Promise<DataRegistration[] | Error> {
+    getAllRegistrations(): Promise<DataRegistration[]> {
         return readResource(this.session, this.DataRegistry_container)
             .then(turtle => parseTurtle(turtle, this.DataRegistry_container))
             .then(async parse_result => {
@@ -128,42 +141,12 @@ export class AuthorizationAgent implements IDataGrantBuilder {
             })
     }
 
-    findDataRegistration(shapeTree: string): Promise<DataRegistration> {
-        return this.getAllDataRegistrations().then(regs => {
-            for (const reg of regs) {
-                if (reg.registeredShapeTree == shapeTree) {
-                    return reg
-                }
-            }
-            throw new Error("No dataregistration")
-        })
-    }
-
-    // createAccessAuthorization(
-    //     applicationProfile: ApplicationProfileDocument,
-    //     scopeOfGrant: GrantScope,
-    //     hasAccessNeedGroup: string,
-    //     dataAuthorizations: DataAuthorization[]
-    // ): AccessAuthorization {
-    //     const webId = applicationProfile.webId;
-
-
-
-    //     return new AccessAuthorization(
-    //         this.AuthorizationRegistry_container + this.newId(webId),
-    //         this.social_agent,
-    //         this.authorization_agent,
-    //         new Date(),
-    //         new ApplicationAgent(webId),
-    //         hasAccessNeedGroup,
-    //         dataAuthorizations);
-    // }
-
-    getDataRegistration(shapeTree: string): DataRegistration {
-        throw new Error("Method not implemented.");
+    getDataRegistrations(shapeTree: string): Promise<DataRegistration[]> {
+        return this.getAllRegistrations().then(regs => regs.filter(reg => reg.registeredShapeTree == shapeTree))
     }
 }
 
 export class ApplicationRegistrationNotExist extends Error {
 
 }
+

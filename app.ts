@@ -8,20 +8,19 @@ import {
 import { config } from "dotenv";
 import * as fs from "fs";
 import * as https from "https";
-import { ApplicationRegistrationNotExist, AuthorizationAgent } from "./src/authorization-agent";
+import { AuthorizationAgent } from "./src/authorization-agent";
 import { getPodUrlAll } from "@inrupt/solid-client";
 import { ProfileDocument } from "./src/profile-document";
 import { authorizationAgentUrl2webId, webId2AuthorizationAgentUrl } from "./src/utils/uri-convert";
 import { AccessApprovalHandler } from "./src/handlers/AccessApprovalHandler";
 import { ApplicationRegistration } from "solid-interoperability/src/data-management/data-model/agent-registration/application-registration"
 import { ApplicationAgent, SocialAgent } from "solid-interoperability";
-import { createContainer, insertTurtleResource, readResource } from "./src/utils/modify-pod";
+import { insertTurtleResource, readResource } from "./src/utils/modify-pod";
 import { serializeTurtle } from "./src/utils/turtle-serializer";
-import { parseTurtle } from "./src/utils/turtle-parser";
-import { Approval } from "./src/RDF/application/approval";
 import { ApplicationProfileDocument } from "./src/RDF/application/application-profile-document";
 import { DataAccessScope, DataAccessScopeAll } from "./src/RDF/application/data-access-scope";
 import { AccessNeedGroup } from "./src/RDF/application/access-need-group";
+import Link from "http-link-header";
 
 config();
 const app = express();
@@ -160,7 +159,7 @@ if (useHttps) {
 //     foaf:primaryTopic <http://localhost:3000/bob-pod/profile/card#me>.
 
 // <http://localhost:3000/bob-pod/profile/card#me>
-    
+
 //     solid:oidcIssuer <http://localhost:3000/>;
 //     a foaf:Person.`
 
@@ -232,7 +231,7 @@ authorization_router.get("/new/callback", async (req, res) => {
     cache.set(webId, new AuthorizationAgent(new SocialAgent(webId), new ApplicationAgent(agent_URI), pods[0], session!))
 
     cache.get(webId)?.createRegistriesSet()
-    
+
     const sess = cache.get(webId)?.session as Session
 
     console.log("INSERT DOCUMENT")
@@ -241,7 +240,7 @@ authorization_router.get("/new/callback", async (req, res) => {
     console.log("READ DOCUMENT")
     console.log(await readResource(sess, cache.get(webId)?.registries_container + "testtesttestaabbbbb"))
     // console.log(await readContainer(cache.get(webId)?.session!, "https://puvikaran.solidcommunity.net/profile/abcde"))
-    
+
 
     // console.log(await readContainer(cache.get(webId)?.session!, "https://puvikaran1.solidcommunity.net/privatae/"))
     // await insertFile(session!, "https://puvikaran.solidcommunity.net/profile/abcde/", profile_document)
@@ -252,35 +251,36 @@ authorization_router.get("/new/callback", async (req, res) => {
     }
 });
 
-authorization_router.get("/:webId", (req, res) => {
-    const authorization_agent: AuthorizationAgent = cache.get(authorizationAgentUrl2webId(req.params.webId))!
-    // return turtle document with the redirecct endpoints
-})
 
-// return the agent registration of the requesting application agent
+/*
+The endpoint for requesting if a Application have access to the Pod.
+Returns the agent registration of the requesting application agent as JSON
+*/
 authorization_router.head("/:webId", (req, res) => {
     const authorization_agent: AuthorizationAgent = cache.get(authorizationAgentUrl2webId(req.params.webId))!
-    const client_id : string = req.query.client_id as string
-    console.log(client_id)
-    const registration : ApplicationRegistration | undefined = authorization_agent.findApplicationRegistration(client_id)
+    const client_id: string = req.query.client_id as string
+    const registration: ApplicationRegistration | undefined = authorization_agent.findApplicationRegistration(client_id)
     if (registration) {
-
+        res.status(200).send(JSON.stringify(registration));
     }
     else {
-        res.status(400)
+        res.status(400).send("No registration found for this WebId: " + req.params.webId);
     }
 })
 
-authorization_router.get("/:webId/redirect", async (req, res) => {
+/*
+The endpoint for the Application wanting access to a Pod
+*/
+authorization_router.post("/:webId/wants-access", async (req, res) => {
     const authorization_agent: AuthorizationAgent = cache.get(authorizationAgentUrl2webId(req.params.webId))!
     const client_id: string = req.query.client_id as string;
     const approved: boolean = accessApprovalHandler.requestAccessApproval();
     const fetch = authorization_agent.session.fetch;
 
-    if(approved){
+    if (approved) {
         const applicationProfileDocument = await ApplicationProfileDocument.getRdfDocument(client_id, fetch);
         const access = new Map<AccessNeedGroup, DataAccessScope[]>();
-        
+
         (await applicationProfileDocument.gethasAccessNeedGroup(fetch)).forEach(async accesNeedGroup => {
             const dataAccessScopes: DataAccessScopeAll[] = [];
             (await accesNeedGroup.getHasAccessNeed(fetch)).forEach(accessNeed => {
@@ -288,22 +288,69 @@ authorization_router.get("/:webId/redirect", async (req, res) => {
             })
             access.set(accesNeedGroup, dataAccessScopes);
         });
-        
+
         authorization_agent.newApplication(accessApprovalHandler.getApprovalStatus(applicationProfileDocument, access));
         res.status(202).send();
     }
-    else{
+    else {
         res.status(403).send('Your request got rejected');
     }
 })
 
-authorization_router.post("/:webId/result", (req, res) => {
-    const authorization_agent: AuthorizationAgent = cache.get(authorizationAgentUrl2webId(req.params.webId))!
-    const client_id = req.query.client_id
-    // return the page where the user can approve or reject access
+authorization_router.get("/:webId/redirect", async (req, res) => {
+    throw new Error('Not implemented yet');
+})
+
+
+
+
+const pods_router = express.Router()
+app.use('/pods', pods_router);
+
+/*
+Endpoint for inserting data into the Pod
+*/
+pods_router.put("/:dataId/:webId", async (req, res) => {
+    const dataId: string = req.params.dataId;
+    const authorization: string = req.headers["Authorization"] as string;
+    const link: string = req.headers["Link"] as string;
+    const authorizationAgent: AuthorizationAgent | undefined = cache.get(req.params.webId);
+
+    if (!authorization || !link) {
+        return res.status(400).json({ error: "Both Authorization and Link headers are required." });
+    }
+
+    if (!authorizationAgent) {
+        return res.status(401).json({ error: "Invalid or expired authorization agent." });
+    }
+
+    try {
+        const linkValue = Link.parse(link);
+
+        if (linkValue.refs.length === 1) {
+            const dataInstanceIRI: string = linkValue.refs[0].uri + '/' + dataId;
+            insertTurtleResource(authorizationAgent.session, dataInstanceIRI, req.body);
+            res.status(200).json({ success: true });
+        } else {
+            res.status(400).json({ error: "Only one Link header is allowed." });
+        }
+    } catch (error) {
+        console.error("Error processing the request:", error);
+        res.status(500).json({ error: "Internal Server Error" });
+    }
+});
+
+/*
+Endpoint for getting data from the Pod
+*/
+pods_router.get("/:dataIRI/:webId", async (req, res) => {
+    const dataIRI: string = req.params.dataIRI;
+    const authorizationAgent: AuthorizationAgent | undefined = cache.get(req.params.webId);
+    readResource(authorizationAgent!.session, dataIRI).then((data) => {
+        res.status(200).send(data);
+    }).catch((error) => {
+        res.status(500).json({ error: "Internal Server Error" });
+    });
 })
 
 export { app };
-
-
-// save(url : string, document : turtle)

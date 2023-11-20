@@ -20,6 +20,7 @@ import { serializeTurtle } from "./src/utils/turtle-serializer";
 import { ApplicationProfileDocument } from "./src/RDF/application/application-profile-document";
 import { DataAccessScope, DataAccessScopeAll } from "./src/RDF/application/data-access-scope";
 import { AccessNeedGroup } from "./src/RDF/application/access-need-group";
+import Link from "http-link-header";
 
 config();
 const app = express();
@@ -267,7 +268,6 @@ authorization_router.head("/:webId", (req, res) => {
     }
 })
 
-
 /*
 The endpoint for the Application wanting access to a Pod
 */
@@ -301,7 +301,43 @@ authorization_router.get("/:webId/redirect", async (req, res) => {
     throw new Error('Not implemented yet');
 })
 
+
+
+
+const pods_router = express.Router()
+app.use('/pods', pods_router);
+
+/*
+Endpoint for inserting data into the Pod
+*/
+pods_router.put("/:dataId/:webId", async (req, res) => {
+    const dataId: string = req.params.dataId;
+    const authorization: string = req.headers["Authorization"] as string;
+    const link: string = req.headers["Link"] as string;
+    const authorizationAgent: AuthorizationAgent | undefined = cache.get(req.params.webId);
+
+    if (!authorization || !link) {
+        return res.status(400).json({ error: "Both Authorization and Link headers are required." });
+    }
+
+    if (!authorizationAgent) {
+        return res.status(401).json({ error: "Invalid or expired authorization agent." });
+    }
+
+    try {
+        const linkValue = Link.parse(link);
+
+        if (linkValue.refs.length === 1) {
+            const dataInstanceIRI: string = linkValue.refs[0].uri + '/' + dataId;
+            insertTurtleResource(authorizationAgent.session, dataInstanceIRI, req.body);
+            res.status(200).json({ success: true });
+        } else {
+            res.status(400).json({ error: "Only one Link header is allowed." });
+        }
+    } catch (error) {
+        console.error("Error processing the request:", error);
+        res.status(500).json({ error: "Internal Server Error" });
+    }
+});
+
 export { app };
-
-
-// save(url : string, document : turtle)

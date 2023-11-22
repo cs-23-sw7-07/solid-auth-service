@@ -1,0 +1,30 @@
+@prefix interop: <https://www.w3.org/ns/solid/interop#>.
+@prefix projectron: <http://localhost:3001/projectron/>.
+@prefix acme: <https://acme.example/>.
+@prefix acl: <https://www.w3.org/ns/auth/acl#>.
+@prefix solidtrees: <https://shapetrees.example/solid/>.
+
+projectron:\#id
+  a interop:Application ;
+  interop:applicationName "Projectron" ;
+  interop:applicationDescription "Manage projects with ease" ;
+  interop:applicationAuthor acme:\#corp ;
+  interop:applicationThumbnail projectron:thumb.svg ;
+  interop:hasAccessNeedGroup projectron:\#need-group-pm .
+projectron:\#need-group-pm
+  interop:accessNecessity interop:accessRequired ;
+  interop:accessScenario interop:PersonalAccess ;
+  interop:authenticatesAs interop:Pilot ;
+  interop:hasAccessDecoratorIndex projectron:index ;
+  interop:hasAccessNeed projectron:\#need-project .
+projectron:\#need-project
+  a interop:AccessNeed ;
+  interop:registeredShapeTree solidtrees:Project ;
+  interop:accessNecessity interop:accessRequired ;
+  interop:accessMode acl:read, acl:write .
+projectron:\#need-issue
+  a interop:AccessNeed ;
+  interop:registeredShapeTree solidtrees:Issue ;
+  interop:accessNecessity interop:accessRequired ;
+  interop:accessMode acl:read, acl:write ;
+  interop:inheritsFromNeed projectron:\#need-project .

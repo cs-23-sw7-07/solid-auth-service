@@ -7,14 +7,11 @@ import {
   readResource,
   updateContainerResource,
 } from "./utils/modify-pod";
-import { type_a, INTEROP} from "./namespace";
-import { SocialAgentProfileDocument } from "./profile-documents/social-agent-profile-document";
+import { type_a, INTEROP, data_registration} from "./namespace";
 import {
-  AccessAuthorization,
   AgentRegistration,
   ApplicationAgent,
   ApplicationRegistration,
-  DataAuthorization,
   DataRegistration,
   NotImplementedYet,
   RdfFactory,
@@ -25,15 +22,18 @@ import { Approval } from "./application/approval";
 import { AuthorizationBuilder } from "./builder/authorization-builder";
 import { AgentRegistrationBuilder } from "./builder/application-registration-builder";
 import { RdfDocument } from "./rdf-document";
+import { ApplicationRegistrationNotExist } from "./application-registration-not-exist";
+import { SocialAgentProfileDocument } from "./profile-documents/social-agent-profile-document";
+import { DataAccessScope } from "./application/data-access-scope";
 
 const { Store, DataFactory } = N3;
 const { namedNode } = DataFactory;
 
 export class AuthorizationAgent {
-  registries_container: string;
-  AgentRegistry_container: string;
-  AuthorizationRegistry_container: string;
-  DataRegistry_container: string;
+  registries_container!: string;
+  AgentRegistry_container!: string;
+  AuthorizationRegistry_container!: string;
+  DataRegistry_container!: string;
 
   constructor(
     public social_agent: SocialAgent,
@@ -41,27 +41,37 @@ export class AuthorizationAgent {
     public pod: string,
     public session: Session,
   ) {
-    this.registries_container = this.pod + "Registries/";
-    this.AgentRegistry_container = this.pod + "Registries/agentregisties/";
-    this.AuthorizationRegistry_container =
-      this.pod + "Registries/accessregisties/";
-    this.DataRegistry_container = this.pod + "data/";
+  }
+
+  async setRegistriesSetContainer(){
+    const profile_document: SocialAgentProfileDocument = await SocialAgentProfileDocument.getProfileDocument(this.social_agent.webID);
+    if (profile_document.hasRegistrySet()) {
+      const set = await profile_document.getRegistrySet(this.session.fetch)
+      this.AgentRegistry_container = set.gethasAgentRegistry()
+      this.AuthorizationRegistry_container = set.gethasAuthorizationRegistry()
+      this.DataRegistry_container = set.gethasDataRegistry()
+    }
+    else {
+      this.registries_container = this.pod + "Registries/";
+      this.AgentRegistry_container = this.registries_container + "agentregisties/";
+      this.AuthorizationRegistry_container = this.registries_container + "accessregisties/";
+      this.DataRegistry_container = this.pod + "data/";
+      profile_document.addhasRegistrySet(this.registries_container)
+      profile_document.updateProfile(this.session)
+      this.createRegistriesSet()
+    }
   }
 
   async createRegistriesSet() {
-    createContainer(this.session, this.registries_container);
-    createContainer(this.session, this.AgentRegistry_container);
-    createContainer(this.session, this.AuthorizationRegistry_container);
-    createContainer(this.session, this.DataRegistry_container);
-
-    const profile_document: SocialAgentProfileDocument =
-      await SocialAgentProfileDocument.getProfileDocument(this.social_agent.webID);
-    await profile_document.updateProfile(this.session);
+    createContainer(this.session.fetch, this.registries_container);
+    createContainer(this.session.fetch, this.AgentRegistry_container);
+    createContainer(this.session.fetch, this.AuthorizationRegistry_container);
+    createContainer(this.session.fetch, this.DataRegistry_container);
 
     const registries_store = new Store();
     registries_store.addQuad(
       namedNode(this.registries_container),
-      type_a,
+      namedNode(type_a),
       namedNode("interop:RegistrySet"),
     );
     registries_store.addQuad(
@@ -91,37 +101,21 @@ export class AuthorizationAgent {
     return uri + randomUUID();
   }
 
-  async newAccessAuthorization(
-    registeredAgent: ApplicationAgent,
-    hasAccessNeedGroup: string,
-    data_authorizations: DataAuthorization[],
-  ) {
-    return new AccessAuthorization(
-      this.generateId(this.AuthorizationRegistry_container),
-      this.social_agent,
-      this.authorization_agent,
-      new Date(),
-      registeredAgent,
-      hasAccessNeedGroup,
-      data_authorizations,
-    );
-  }
-
   async newApplication(approval: Approval) {
-    let authorizationBuilders: AuthorizationBuilder[] = [];
-    approval.access.forEach((dataAccessScopes, needGroup) => {
-      const authorizationBuilder = new AuthorizationBuilder(
+    let authBuilders: AuthorizationBuilder[] = [];
+    approval.access.forEach((scopes, needGroup) => {
+      const authBuilder = new AuthorizationBuilder(
         this,
         approval.agent,
       );
-      dataAccessScopes.forEach((dataAccessScope) => {
-        authorizationBuilder.createDataAuthorization(dataAccessScope);
+      scopes.forEach((dataAccessScope: DataAccessScope) => {
+        authBuilder.createDataAuthorization(dataAccessScope);
       });
-      authorizationBuilder.createAccessAuthorization(needGroup);
-      authorizationBuilders.push(authorizationBuilder);
+      authBuilder.createAccessAuthorization(needGroup);
+      authBuilders.push(authBuilder);
     });
 
-    for (const authorizationBuilder of authorizationBuilders) {
+    for (const authorizationBuilder of authBuilders) {
       authorizationBuilder
         .getCreatedDataAuthorizations()
         .forEach(async (data_authoriza) => {
@@ -152,7 +146,7 @@ export class AuthorizationAgent {
     }
 
     const builder = new AgentRegistrationBuilder(this);
-    builder.build(approval.agent, authorizationBuilders);
+    builder.build(approval.agent, authBuilders);
     builder.storeToPod();
 
     const predicate =
@@ -172,27 +166,24 @@ export class AuthorizationAgent {
     );
   }
 
-  async findRegistration(client_id: string): Promise<AgentRegistration> {
-    const parse_result = await parseTurtle(
-      await readResource(this.session, this.AgentRegistry_container),
-      this.AgentRegistry_container,
-    );
-    const agent_registry_set = new RdfDocument(
+  async findAgentRegistration(webId: string): Promise<AgentRegistration> {
+    const agent_registry_set = await readResource(this.session, this.AgentRegistry_container)
+    .then(turtle => parseTurtle(turtle, this.AgentRegistry_container))
+    .then(parse_result => new RdfDocument(
       this.AgentRegistry_container,
       parse_result.dataset,
       parse_result.prefixes,
-    );
-    const type = agent_registry_set.getObjectValueFromPredicate(
-      "http://www.w3.org/1999/02/22-rdf-syntax-ns#type",
-    );
+    ));
+    
+    const type = agent_registry_set.getTypeOfSubject();
 
     const registration_type =
       type == INTEROP + "Application"
-        ? "hasApplicationRegistration"
-        : "hasSocialAgentRegistration";
+        ? INTEROP + "hasApplicationRegistration"
+        : INTEROP + "hasSocialAgentRegistration";
 
     const registrations_iri = agent_registry_set.getObjectValuesFromPredicate(
-      INTEROP + registration_type,
+       registration_type,
     );
 
     const factory = new RdfFactory();
@@ -210,12 +201,16 @@ export class AuthorizationAgent {
         ApplicationRegistration.makeApplicationRegistration(await rdf),
       );
     } else {
-      throw new NotImplementedYet();
+      throw new NotImplementedYet("Have not implmented a makeSocialAgentRegistration method on SocialAgentRegistration");
     }
 
     for (const reg of agent_registration) {
-      if ((await reg).registeredAgent.webID == client_id) return reg;
+      if ((await reg).registeredAgent.webID == webId) return reg;
     }
+
+    const reg = await agent_registration.find(async reg => (await reg).registeredAgent.webID == webId)
+    if (reg) 
+      return reg
 
     throw new ApplicationRegistrationNotExist();
   }
@@ -227,11 +222,9 @@ export class AuthorizationAgent {
         const dataset = parse_result.dataset;
         let registration: DataRegistration[] = [];
         const rdf_creater = new RdfFactory();
-        const data_registration_predicate =
-          "http://www.w3.org/ns/solid/interop#hasDataRegistration";
         for (const quad of dataset.match(
           null,
-          namedNode(data_registration_predicate),
+          namedNode(data_registration),
         )) {
           registration.push(
             await rdf_creater
@@ -251,18 +244,20 @@ export class AuthorizationAgent {
     shapeTree: string,
     dataOwner?: SocialAgent,
   ): Promise<DataRegistration[]> {
-    const predicateShapeTree = (dataReg: DataRegistration) =>
-      dataReg.registeredShapeTree == shapeTree;
-    const predicateDataOwner = (dataReg: DataRegistration) => {
+    const pShapeTree = (reg: DataRegistration) =>
+      reg.registeredShapeTree == shapeTree;
+
+    const pDataOwner = (dataReg: DataRegistration) => {
       if (dataOwner) {
         return dataReg.registeredBy == dataOwner;
       }
       return true;
     };
+
     return this.getAllRegistrations().then((regs) =>
-      regs.filter((reg) => predicateShapeTree(reg) && predicateDataOwner(reg)),
+      regs.filter((reg) => pShapeTree(reg) && pDataOwner(reg)),
     );
   }
 }
 
-export class ApplicationRegistrationNotExist extends Error {}
+

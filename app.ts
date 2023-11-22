@@ -9,6 +9,7 @@ import { config } from "dotenv";
 import * as fs from "fs";
 import * as https from "https";
 import { AuthorizationAgent } from "./src/authorization-agent";
+import { ApplicationRegistrationNotExist } from "./src/application-registration-not-exist";
 import { getPodUrlAll } from "@inrupt/solid-client";
 import { SocialAgentProfileDocument } from "./src/profile-documents/social-agent-profile-document";
 import { authorizationAgentUrl2webId, webId2AuthorizationAgentUrl } from "./src/utils/uri-convert";
@@ -21,6 +22,9 @@ import { ApplicationProfileDocument } from "./src/profile-documents/application-
 import { DataAccessScope, DataAccessScopeAll } from "./src/application/data-access-scope";
 import { AccessNeedGroup } from "./src/application/access-need-group";
 import Link from "http-link-header";
+import { parseTurtle } from "./src/utils/turtle-parser";
+import path from "path";
+import { RedisSolidStorage } from "./src/redis/redis-storage";
 
 config();
 const app = express();
@@ -33,9 +37,6 @@ const private_key = process.env.PRIVATEKEY ?? "";
 const certificate = process.env.CERTIFICATE ?? "";
 
 const oidcIssuers = ["https://login.inrupt.com", "https://solidweb.me", "https://solidcommunity.net"]
-
-const accessApprovalHandler = new AccessApprovalHandler();
-
 
 type WebId = string;
 const cache = new Map<WebId, AuthorizationAgent>();
@@ -53,85 +54,85 @@ app.use(
     }),
 );
 
-app.get("/login", async (req, res) => {
-    // 1. Create a new Session
-    const session = new Session();
-    req.session!.sessionId = session.info.sessionId;
-    const redirectToSolidIdentityProvider = (url: string) => {
-        // Since we use Express in this example, we can call `res.redirect` to send the user to the
-        // given URL, but the specific method of redirection depend on your app's particular setup.
-        // For example, if you are writing a command line app, this might simply display a prompt for
-        // the user to visit the given URL in their browser.
-        res.redirect(url);
-    };
-    // 2. Start the login process; redirect handler will handle sending the user to their
-    //    Solid Identity Provider.
-    await session.login({
-        // After login, the Solid Identity Provider will send the user back to the following
-        // URL, with the data necessary to complete the authentication process
-        // appended as query parameters:
-        redirectUrl: `${protocol}${address}:${port}/login/callback`,
-        // Set to the user's Solid Identity Provider; e.g., "https://login.inrupt.com"
-        oidcIssuer: oidcIssuers[2],
-        // Pick an application name that will be shown when asked
-        // to approve the application's access to the requested data.
-        clientName: "Authorization Agent",
-        handleRedirect: redirectToSolidIdentityProvider,
-    });
-});
+// app.get("/login", async (req, res) => {
+//     // 1. Create a new Session
+//     const session = new Session();
+//     req.session!.sessionId = session.info.sessionId;
+//     const redirectToSolidIdentityProvider = (url: string) => {
+//         // Since we use Express in this example, we can call `res.redirect` to send the user to the
+//         // given URL, but the specific method of redirection depend on your app's particular setup.
+//         // For example, if you are writing a command line app, this might simply display a prompt for
+//         // the user to visit the given URL in their browser.
+//         res.redirect(url);
+//     };
+//     // 2. Start the login process; redirect handler will handle sending the user to their
+//     //    Solid Identity Provider.
+//     await session.login({
+//         // After login, the Solid Identity Provider will send the user back to the following
+//         // URL, with the data necessary to complete the authentication process
+//         // appended as query parameters:
+//         redirectUrl: `${protocol}${address}:${port}/login/callback`,
+//         // Set to the user's Solid Identity Provider; e.g., "https://login.inrupt.com"
+//         oidcIssuer: oidcIssuers[2],
+//         // Pick an application name that will be shown when asked
+//         // to approve the application's access to the requested data.
+//         clientName: "Authorization Agent",
+//         handleRedirect: redirectToSolidIdentityProvider,
+//     });
+// });
 
-app.get("/login/callback", async (req, res) => {
-    // 3. If the user is sent back to the `redirectUrl` provided in step 2,
-    //    it means that the login has been initiated and can be completed. In
-    //    particular, initiating the login stores the session in storage,
-    //    which means it can be retrieved as follows.
-    const session = await getSessionFromStorage(req.session!.sessionId);
+// app.get("/login/callback", async (req, res) => {
+//     // 3. If the user is sent back to the `redirectUrl` provided in step 2,
+//     //    it means that the login has been initiated and can be completed. In
+//     //    particular, initiating the login stores the session in storage,
+//     //    which means it can be retrieved as follows.
+//     const session = await getSessionFromStorage(req.session!.sessionId);
 
-    // 4. With your session back from storage, you are now able to
-    //    complete the login process using the data appended to it as query
-    //    parameters in req.url by the Solid Identity Provider:
-    await session!.handleIncomingRedirect(
-        `${req.protocol}://${req.get("host")}${req.originalUrl}`,
-    );
+//     // 4. With your session back from storage, you are now able to
+//     //    complete the login process using the data appended to it as queryª
+//     //    parameters in req.url by the Solid Identity Provider:
+//     await session!.handleIncomingRedirect(
+//         `${req.protocol}://${req.get("host")}${req.originalUrl}`,
+//     );
 
-    // 5. `session` now contains an authenticated Session instance.
-    const webId = session!.info.webId!
-    if (session!.info.isLoggedIn) {
-        return res.send(`<p>Logged in with the WebID ${webId}.</p>`);
-    }
-});
+//     // 5. `session` now contains an authenticated Session instance.
+//     const webId = session!.info.webId!
+//     if (session!.info.isLoggedIn) {
+//         return res.send(`<p>Logged in with the WebID ${webId}.</p>`);
+//     }
+// });
 
-// 6. Once you are logged in, you can retrieve the session from storage,
-//    and perform authenticated fetches.
-app.get("/fetch", async (req, res) => {
-    if (typeof req.query["resource"] === "undefined") {
-        res.send(
-            "<p>Please pass the (encoded) URL of the Resource you want to fetch using `?resource=&lt;resource URL&gt;`.</p>",
-        );
-    }
-    const session = await getSessionFromStorage(req.session!.sessionId);
-    const f = req.query["resource"];
-    console.log(await (await session!.fetch(<string>f)).text());
-    res.send("<p>Performed authenticated fetch.</p>");
-});
+// // 6. Once you are logged in, you can retrieve the session from storage,
+// //    and perform authenticated fetches.
+// app.get("/fetch", async (req, res) => {
+//     if (typeof req.query["resource"] === "undefined") {
+//         res.send(
+//             "<p>Please pass the (encoded) URL of the Resource you want to fetch using `?resource=&lt;resource URL&gt;`.</p>",
+//         );
+//     }
+//     const session = await getSessionFromStorage(req.session!.sessionId);
+//     const f = req.query["resource"];
+//     console.log(await (await session!.fetch(<string>f)).text());
+//     res.send("<p>Performed authenticated fetch.</p>");
+// });
 
-// 7. To log out a session, just retrieve the session from storage, and
-//    call the .logout method.
-app.get("/logout", async (req, res) => {
-    const session = await getSessionFromStorage(req.session!.sessionId);
-    session!.logout();
-    res.send(`<p>Logged out.</p>`);
-});
+// // 7. To log out a session, just retrieve the session from storage, and
+// //    call the .logout method.
+// app.get("/logout", async (req, res) => {
+//     const session = await getSessionFromStorage(req.session!.sessionId);
+//     session!.logout();
+//     res.send(`<p>Logged out.</p>`);
+// });
 
-// 8. On the server side, you can also list all registered sessions using the
-//    getSessionIdFromStorageAll function.
-app.get("/", async (req, res) => {
-    const sessionIds = await getSessionIdFromStorageAll();
-    for (const a in sessionIds) {
-        // Do something with the session ID...
-    }
-    res.send(`<p>There are currently [${sessionIds.length}] visitors.</p>`);
-});
+// // 8. On the server side, you can also list all registered sessions using the
+// //    getSessionIdFromStorageAll function.
+// app.get("/", async (req, res) => {
+//     const sessionIds = await getSessionIdFromStorageAll();
+//     for (const a in sessionIds) {
+//         // Do something with the session ID...
+//     }
+//     res.send(`<p>There are currently [${sessionIds.length}] visitors.</p>`);
+// });
 
 if (useHttps) {
     const options = {
@@ -177,7 +178,7 @@ app.use('/agents', authorization_router);
 
 authorization_router.get("/new", async (req, res) => {
     // 1. Create a new Session
-    const session = new Session();
+    const session = new Session({ storage: new RedisSolidStorage() });
     req.session!.sessionId = session.info.sessionId;
     const redirectToSolidIdentityProvider = (url: string) => {
         // Since we use Express in this example, we can call `res.redirect` to send the user to the
@@ -203,49 +204,84 @@ authorization_router.get("/new", async (req, res) => {
     // return turtle document with the redirecct endpoints
 })
 
+async function getAlreadyAuthorizationAgents() {
+    await getSessionIdFromStorageAll(new RedisSolidStorage())
+        .then(async sessionIds => {
+            for (const id of sessionIds) {
+                const session = await getSessionFromStorage(id, new RedisSolidStorage())
+                if (!session) {
+                    continue;
+                }
+                const webId = session.info.webId!
+                const agent_URI = webId2AuthorizationAgentUrl(webId)
+                const pods = await getPodUrlAll(webId, { fetch: session!.fetch })
+                console.log(webId)
+                console.log(pods[0])
+                console.log(session.info)
+                cache.set(webId, new AuthorizationAgent(new SocialAgent(webId), new ApplicationAgent(agent_URI), pods[0], session))
+                cache.get(webId)!.setRegistriesSetContainer()
+            }
+        })
+}
+
+async function removePrevoiusSession(webId: string, expectSessionId: string) {
+    await getSessionIdFromStorageAll(new RedisSolidStorage())
+        .then(async sessionIds => {
+            for (const id of sessionIds) {
+                if (id == expectSessionId) {
+                    continue;
+                }
+                const session = await getSessionFromStorage(id, new RedisSolidStorage())
+                if (!session) {
+                    continue;
+                }
+                if (session.info.webId! == webId) {
+                    session.logout()
+                }
+            }
+        })
+}
+
 authorization_router.get("/new/callback", async (req, res) => {
     // 3. If the user is sent back to the `redirectUrl` provided in step 2,
     //    it means that the login has been initiated and can be completed. In
     //    particular, initiating the login stores the session in storage,
     //    which means it can be retrieved as follows.
-    const session = await getSessionFromStorage(req.session!.sessionId);
+    const session = await getSessionFromStorage(req.session!.sessionId, new RedisSolidStorage());
+
+
+    if (!session) {
+        return res.sendStatus(403).send()
+    }
 
     // 4. With your session back from storage, you are now able to
     //    complete the login process using the data appended to it as query
     //    parameters in req.url by the Solid Identity Provider:
-    await session!.handleIncomingRedirect(
+    await session.handleIncomingRedirect(
         `${req.protocol}://${req.get("host")}${req.originalUrl}`,
-    );
+    )
 
     // 5. `session` now contains an authenticated Session instance.
-    const webId = session!.info.webId!
-    const agent_URI = webId2AuthorizationAgentUrl(webId)
-    const profile_document: SocialAgentProfileDocument = await SocialAgentProfileDocument.getProfileDocument(webId)
+    const webId = session.info.webId!
+    removePrevoiusSession(webId, req.session!.sessionId)
+    const authAgent = cache.get(webId)
+    if (authAgent) {
+        authAgent.session = session
+    }
+    else {
+        const agent_URI = webId2AuthorizationAgentUrl(webId)
+        const profile_document: SocialAgentProfileDocument = await SocialAgentProfileDocument.getProfileDocument(webId)
 
-    if (!profile_document.hasAuthorizationAgent(agent_URI)) {
-        profile_document.addhasAuthorizationAgent(agent_URI)
-        profile_document.updateProfile(session!)
+        if (!(profile_document.hasAuthorizationAgent(agent_URI))) {
+            profile_document.addhasAuthorizationAgent(agent_URI)
+        }
+
+        const pods = await getPodUrlAll(webId, { fetch: session!.fetch })
+        cache.set(webId, new AuthorizationAgent(new SocialAgent(webId), new ApplicationAgent(agent_URI), pods[0], session))
+        cache.get(webId)!.setRegistriesSetContainer()
     }
 
-    const pods = await getPodUrlAll(webId, { fetch: session!.fetch })
-    cache.set(webId, new AuthorizationAgent(new SocialAgent(webId), new ApplicationAgent(agent_URI), pods[0], session!))
 
-    cache.get(webId)?.createRegistriesSet()
-
-    const sess = cache.get(webId)?.session as Session
-
-    console.log("INSERT DOCUMENT")
-    await insertTurtleResource(sess, cache.get(webId)?.registries_container + "testtesttestaabbbbb", await serializeTurtle(profile_document.dataset, { "interop": "http://www.w3.org/ns/solid/interop#" }))
-    console.log("INSERTED DOCUMENT")
-    console.log("READ DOCUMENT")
-    console.log(await readResource(sess, cache.get(webId)?.registries_container + "testtesttestaabbbbb"))
-    // console.log(await readContainer(cache.get(webId)?.session!, "https://puvikaran.solidcommunity.net/profile/abcde"))
-
-
-    // console.log(await readContainer(cache.get(webId)?.session!, "https://puvikaran1.solidcommunity.net/privatae/"))
-    // await insertFile(session!, "https://puvikaran.solidcommunity.net/profile/abcde/", profile_document)
-    // await createContainer(session!, "https://puvikaran.solidcommunity.net/profile/ab/aaaaa/", await serializeTurtle(profile_document, { "interop": "http://www.w3.org/ns/solid/interop#" }))
-    // await updateContainer(session!, "https://puvikaran.solidcommunity.net/profile/ab/aaaaa/.meta", profile_document)
     if (session!.info.isLoggedIn) {
         return res.send(`<p>Logged in with the WebID ${webId}. <a herf="localhost:3001/agents/new"></p>`);
     }
@@ -256,41 +292,54 @@ authorization_router.get("/new/callback", async (req, res) => {
 The endpoint for requesting if a Application have access to the Pod.
 Returns the agent registration of the requesting application agent as JSON
 */
-authorization_router.head("/:webId", (req, res) => {
+authorization_router.head("/:webId", async (req, res) => {
     const authorization_agent: AuthorizationAgent = cache.get(authorizationAgentUrl2webId(req.params.webId))!
     const client_id: string = req.query.client_id as string
-    const registration: ApplicationRegistration | undefined = authorization_agent.findApplicationRegistration(client_id)
-    if (registration) {
+    try {
+        const registration: ApplicationRegistration = await authorization_agent.findAgentRegistration(client_id) as ApplicationRegistration
         res.status(200).send(JSON.stringify(registration));
-    }
-    else {
+    } catch (error) {
         res.status(400).send("No registration found for this WebId: " + req.params.webId);
     }
 })
 
+// async function a(){
+//     const s = fs.readFileSync("test/projectron.ttl", "utf-8")
+//     const client_id = "https://projectron.example/#id"
+//     const p = await parseTurtle(s, client_id)
+//     return new ApplicationProfileDocument(client_id, p.dataset, p.prefixes)
+// }
+
+
 /*
 The endpoint for the Application wanting access to a Pod
 */
-authorization_router.post("/:webId/wants-access", async (req, res) => {
+authorization_router.post("/:webId/wants-access", async (req, res, next) => {
     const authorization_agent: AuthorizationAgent = cache.get(authorizationAgentUrl2webId(req.params.webId))!
+    const accessApprovalHandler = new AccessApprovalHandler();
+
     const client_id: string = req.query.client_id as string;
+
     const approved: boolean = accessApprovalHandler.requestAccessApproval();
+
     const fetch = authorization_agent.session.fetch;
 
     if (approved) {
-        const applicationProfileDocument = await ApplicationProfileDocument.getRdfDocument(client_id, fetch);
-        const access = new Map<AccessNeedGroup, DataAccessScope[]>();
-
-        (await applicationProfileDocument.gethasAccessNeedGroup(fetch)).forEach(async accesNeedGroup => {
-            const dataAccessScopes: DataAccessScopeAll[] = [];
-            (await accesNeedGroup.getHasAccessNeed(fetch)).forEach(accessNeed => {
-                dataAccessScopes.push(new DataAccessScopeAll(accessNeed));
+        ApplicationProfileDocument.getRdfDocument(client_id, fetch)
+            .then(applicationProfileDocument => applicationProfileDocument.gethasAccessNeedGroup(fetch))
+            .then(needGroups => {
+                const access = new Map<AccessNeedGroup, DataAccessScope[]>();
+                needGroups.forEach(group => {
+                    group.then(group => {
+                        group.getHasAccessNeed(fetch)
+                            .then(needs => access.set(group, needs.map(accessNeed => new DataAccessScopeAll(accessNeed))))
+                    })
+                })
+                return access
             })
-            access.set(accesNeedGroup, dataAccessScopes);
-        });
-
-        authorization_agent.newApplication(accessApprovalHandler.getApprovalStatus(applicationProfileDocument, access));
-        res.status(202).send();
+            .then(access => authorization_agent.newApplication(accessApprovalHandler.getApprovalStatus(new ApplicationAgent(client_id), access)))
+            .then(_ => res.status(202).send())
+            .catch(err => res.sendStatus(500));
     }
     else {
         res.status(403).send('Your request got rejected');
@@ -353,4 +402,18 @@ pods_router.get("/:dataIRI/:webId", async (req, res) => {
     });
 })
 
+
+
+const projectron_router = express.Router()
+app.use('/projectron', projectron_router);
+
+projectron_router.get("/", async (req, res) => {
+    const options = {
+        root: path.join(__dirname, "../")
+    };
+    return res.status(200).sendFile("test/projectron.ttl", options);
+})
+
 export { app };
+
+getAlreadyAuthorizationAgents()

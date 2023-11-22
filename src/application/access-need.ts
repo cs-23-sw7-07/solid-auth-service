@@ -1,14 +1,27 @@
 import { AccessMode, Fetch, getAccessmode } from "solid-interoperability";
 import { RdfDocument } from "../rdf-document";
 import { INTEROP } from "../namespace";
+import { DatasetCore } from "@rdfjs/types";
+import { DataFactory, Prefixes } from "n3";
+import { parseTurtle } from "../utils/turtle-parser";
 
 export class AccessNeed extends RdfDocument {
-  constructor(uri: string) {
-    super(uri);
+  constructor(
+    uri: string,
+    dataset?: DatasetCore,
+    prefixes?: Prefixes,
+  ) {
+    super(uri, dataset, prefixes)
   }
 
-  static async getRdfDocument(uri: string, fetch: Fetch): Promise<AccessNeed> {
-    return (await RdfDocument.getRdfDocument(uri, fetch)) as AccessNeed;
+  static async getRdfDocument(
+    uri: string,
+    fetch: Fetch,
+  ): Promise<AccessNeed> {
+    return fetch(uri)
+    .then((res) => res.text())
+    .then((res) => parseTurtle(res, uri))
+    .then(result => new AccessNeed(uri, result.dataset.match(DataFactory.namedNode(uri)), result.prefixes));
   }
 
   getRegisteredShapeTree(): string {

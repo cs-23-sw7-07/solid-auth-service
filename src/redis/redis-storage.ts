@@ -5,8 +5,10 @@ import { RedisConnectionInfo } from "./redis-connection-info";
 export class RedisSolidStorage implements IStorage {
   private client;
 
-  public constructor(info: RedisConnectionInfo) {
-    this.client = new Redis(info);
+  public constructor(info?: RedisConnectionInfo) {
+    this.client = Redis.createClient();
+    console.log("Redis client created")
+    console.log(this.client.status)
   }
 
   async delete(key: string): Promise<void> {

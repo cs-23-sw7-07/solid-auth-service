@@ -1,40 +1,35 @@
-import N3, { NamedNode, Prefixes } from "n3";
+import N3, { Prefixes } from "n3";
 import { Session } from "@inrupt/solid-client-authn-node";
 import { parseTurtle } from "../utils/turtle-parser";
 import { serializeTurtle } from "../utils/turtle-serializer";
 import { DatasetCore } from "@rdfjs/types";
-
-const { Store, Parser, DataFactory } = N3;
-const { quad, namedNode, defaultGraph } = DataFactory;
+import { RdfDocument } from "../rdf-document";
+import { INTEROP } from "../namespace";
+import { Fetch } from "solid-interoperability";
+import { RegistrySetResource } from "../registry-set-resource";
+const { quad, namedNode, defaultGraph } = N3.DataFactory;
 
 const oidcIssuer_PREDICATE = "http://www.w3.org/ns/solid/terms#oidcIssuer";
 
-export class SocialAgentProfileDocument {
+export class SocialAgentProfileDocument extends RdfDocument {
   constructor(
-    public webId: string,
-    public dataset: DatasetCore,
-    public prefixes: Prefixes,
-  ) {}
+    webId: string,
+    dataset?: DatasetCore,
+    prefixes?: Prefixes,
+  ) {
+    super(webId, dataset, prefixes)
+  }
 
-  static async getProfileDocument(webId: string): Promise<SocialAgentProfileDocument> {
-    let result = await fetch(webId)
-      .then((res) => res.text())
-      .then((res) => parseTurtle(res, webId));
-    return new SocialAgentProfileDocument(webId, result.dataset, result.prefixes);
+  static async getProfileDocument(uri: string): Promise<SocialAgentProfileDocument> {
+    return fetch(uri)
+    .then((res) => res.text())
+    .then((res) => parseTurtle(res, uri))
+    .then(result => new SocialAgentProfileDocument(uri, result.dataset, result.prefixes));
   }
 
   hasAuthorizationAgent(authorization_uri: string): boolean {
-    const quads = this.dataset.match(
-      null,
-      namedNode("http://www.w3.org/ns/solid/interop#hasAuthorizationAgent"),
-    );
-
-    for (const quad of quads) {
-      if (quad.object.value == authorization_uri) {
-        return true;
-      }
-    }
-    return false;
+    const authorization_agents = this.getObjectValuesFromPredicate("http://www.w3.org/ns/solid/interop#hasAuthorizationAgent")
+    return authorization_agents != undefined && authorization_agents.includes(authorization_uri)
   }
 
   addhasAuthorizationAgent(agent_URI: string) {
@@ -49,8 +44,16 @@ export class SocialAgentProfileDocument {
   }
 
   hasRegistrySet(): boolean {
-    const quads = this.dataset.match(null, namedNode("interop:hasRegistrySet"));
-    return quads.size == 1;
+    const sets = this.getObjectValuesFromPredicate(INTEROP + "hasRegistrySet");
+    return sets != undefined;
+  }
+
+  getRegistrySet(fetch: Fetch): Promise<RegistrySetResource> {
+    const set = this.getObjectValueFromPredicate(INTEROP + "hasRegistrySet")!;
+    return fetch(set)
+    .then((res) => res.text())
+    .then((res) => parseTurtle(res, set))
+    .then(parsed => new RegistrySetResource(set, parsed.dataset))
   }
 
   addhasRegistrySet(registries_container: string) {
@@ -65,7 +68,7 @@ export class SocialAgentProfileDocument {
   }
 
   async updateProfile(session: Session) {
-    await session.fetch(this.webId, {
+    await session.fetch(this.uri, {
       method: "PUT",
       body: await serializeTurtle(this.dataset, {
         interop: "http://www.w3.org/ns/solid/interop#",

@@ -12,7 +12,7 @@ export class AuthorizationBuilder {
     string,
     DataAuthorization
   >();
-  private access_authorizations: AccessAuthorization | undefined = undefined;
+  private access_authorizations!: AccessAuthorization;
 
   constructor(
     public authorizationAgent: AuthorizationAgent,
@@ -34,7 +34,7 @@ export class AuthorizationBuilder {
   }
 
   getCreatedDataAuthorizations(): DataAuthorization[] {
-    return Array.from(this.data_authorizations.values()).flat();
+    return Array.from(this.data_authorizations.values());
   }
 
   async createAccessAuthorization(access_need_group: AccessNeedGroup) {

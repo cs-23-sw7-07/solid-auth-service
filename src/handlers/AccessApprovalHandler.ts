@@ -1,4 +1,4 @@
-import { GrantScope } from "solid-interoperability";
+import { Agent, GrantScope } from "solid-interoperability";
 import { IAccessApproval } from "../interfaces/IAccessApproval";
 import { Approval } from "../application/approval";
 import { ApplicationProfileDocument } from "../profile-documents/application-profile-document";
@@ -18,11 +18,11 @@ export class AccessApprovalHandler implements IAccessApproval {
     this.isAccessGranted = value;
   }
   getApprovalStatus(
-    applicationProfileDocument: ApplicationProfileDocument,
+    agent: Agent,
     access: Map<AccessNeedGroup, DataAccessScope[]>,
   ): Approval {
     if (this.isAccessGranted)
-      return new Approval(applicationProfileDocument, access);
+      return new Approval(agent, access);
     else throw Error("Undefined approval status.");
   }
 }

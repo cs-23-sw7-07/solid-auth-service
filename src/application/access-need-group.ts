@@ -8,17 +8,27 @@ import { RdfDocument } from "../rdf-document";
 import { INTEROP } from "../namespace";
 import { AccessNeed } from "./access-need";
 import { AuthorizationAgent } from "../authorization-agent";
+import { parseTurtle } from "../utils/turtle-parser";
+import { DatasetCore } from "@rdfjs/types";
+import { DataFactory, Prefixes } from "n3";
 
 export class AccessNeedGroup extends RdfDocument {
-  constructor(uri: string) {
-    super(uri);
+  constructor(
+    uri: string,
+    dataset?: DatasetCore,
+    prefixes?: Prefixes,
+  ) {
+    super(uri, dataset, prefixes)
   }
 
   static async getRdfDocument(
     uri: string,
     fetch: Fetch,
   ): Promise<AccessNeedGroup> {
-    return (await RdfDocument.getRdfDocument(uri, fetch)) as AccessNeedGroup;
+    return fetch(uri)
+    .then((res) => res.text())
+    .then((res) => {console.log(res); return parseTurtle(res, uri)})
+    .then(result => new AccessNeedGroup(uri, result.dataset.match(DataFactory.namedNode(uri)), result.prefixes));
   }
 
   gethasAccessDescriptionSet(): string[] | undefined {

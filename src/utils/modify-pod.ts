@@ -1,6 +1,7 @@
 import { Session } from "@inrupt/solid-client-authn-node";
 import { DatasetCore } from "@rdfjs/types";
 import { serializeTurtle } from "./turtle-serializer";
+import { Fetch } from "solid-interoperability";
 
 export async function insertTurtleResource(
   session: Session,
@@ -16,10 +17,14 @@ export async function insertTurtleResource(
         "Content-Type": "text/turtle",
       },
     })
-    .then(console.log);
+    .then(res => {
+      if (!res.ok) {
+        return new InsertResourceError(`Couldn't insert resource at ${uri}`)
+      }
+    });
 }
 
-export async function createContainer(session: Session, uri_container: string) {
+export async function createContainer(fetch: Fetch, uri_container: string) {
   const headers = new Headers({
     "Content-Type": "text/turtle",
   });
@@ -29,7 +34,7 @@ export async function createContainer(session: Session, uri_container: string) {
     headers: headers,
   };
 
-  const response = await session.fetch(uri_container, requestOptions);
+  const response = await fetch(uri_container, requestOptions);
   if (!response.ok) {
     throw new Error(`failed to create containers ${uri_container} ${response}`);
   }
@@ -77,5 +82,22 @@ export async function updateContainerResource(
 
 
 export function readResource(session: Session, url: string): Promise<string> {
-  return session.fetch(url).then((res) => res.text());
+  return session.fetch(url)
+    .then((res) => {
+      if (res.ok)
+        return res.text()
+      throw new ReadResourceError("Couldn't read the resource at " + url)
+    });
+}
+
+class InsertResourceError extends Error {
+  constructor(public message: string) {
+    super(message)
+  }
+}
+
+class ReadResourceError extends Error {
+  constructor(public message: string) {
+    super(message)
+  }
 }

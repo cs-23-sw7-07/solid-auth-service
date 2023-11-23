@@ -8,7 +8,6 @@ import {
 import { AuthorizationAgent } from "../authorization-agent";
 import { DataAccessScope } from "../application/data-access-scope";
 import { AccessNeedGroup } from "../application/access-need-group";
-import { forEachChild } from "typescript";
 import { createContainer, updateContainerResource } from "../utils/modify-pod";
 import { parseTurtle } from "../utils/turtle-parser";
 

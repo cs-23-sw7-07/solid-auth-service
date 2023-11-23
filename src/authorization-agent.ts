@@ -108,41 +108,13 @@ export class AuthorizationAgent {
         this,
         approval.agent,
       );
-      scopes.forEach((dataAccessScope: DataAccessScope) => {
-        authBuilder.createDataAuthorization(dataAccessScope);
-      });
+      authBuilder.createDataAuthorizations(scopes);
       authBuilder.createAccessAuthorization(needGroup);
       authBuilders.push(authBuilder);
     });
 
     for (const authorizationBuilder of authBuilders) {
-      authorizationBuilder
-        .getCreatedDataAuthorizations()
-        .forEach(async (data_authoriza) => {
-          const turtle = (await new RdfFactory().create(
-            data_authoriza,
-          )) as string; // Error handling
-          insertTurtleResource(this.session, data_authoriza.id, turtle);
-        });
-
-      const access_authoriza =
-        authorizationBuilder.getCreatedAccessAuthorization();
-      const turtle = (await new RdfFactory().create(
-        access_authoriza,
-      )) as string; // Error handling
-      insertTurtleResource(this.session, access_authoriza.id, turtle);
-
-      const AuthorizationRegistry_store = new Store();
-      AuthorizationRegistry_store.addQuad(
-        namedNode(this.AuthorizationRegistry_container),
-        namedNode("interop:hasAccessAuthorization"),
-        namedNode(access_authoriza.id),
-      );
-      await updateContainerResource(
-        this.session,
-        this.AuthorizationRegistry_container + ".meta",
-        AuthorizationRegistry_store,
-      );
+      authorizationBuilder.storeToPod()
     }
 
     const builder = new AgentRegistrationBuilder(this);

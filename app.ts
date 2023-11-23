@@ -339,7 +339,7 @@ authorization_router.post("/:webId/wants-access", async (req, res, next) => {
             })
             .then(access => authorization_agent.newApplication(accessApprovalHandler.getApprovalStatus(new ApplicationAgent(client_id), access)))
             .then(_ => res.status(202).send())
-            .catch(err => res.sendStatus(500));
+            .catch(err => res.status(500).send(err));
     }
     else {
         res.status(403).send('Your request got rejected');
@@ -347,10 +347,8 @@ authorization_router.post("/:webId/wants-access", async (req, res, next) => {
 })
 
 authorization_router.get("/:webId/redirect", async (req, res) => {
-    throw new Error('Not implemented yet');
+    res.redirect(`/${req.params.webId}/wants-access`)
 })
-
-
 
 
 const pods_router = express.Router()

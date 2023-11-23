@@ -64,19 +64,19 @@ export class AgentRegistrationBuilder {
       insertTurtleResource(
         session,
         grant.id,
-        (await factory.create(grant)!) as string,
+        (await factory.create(grant)!),
       ),
     );
     this.access_grants.forEach(async (grant) =>
       insertTurtleResource(
         session,
         grant.id,
-        (await factory.create(grant)!) as string,
+        (await factory.create(grant)!),
       ),
     );
     const registration_turtle = (await factory.create(
       this.registration!,
-    )!) as string;
+    )!);
     updateContainerResource(
       session,
       this.registration!.id + ".meta",

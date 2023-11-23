@@ -16,7 +16,7 @@ import { authorizationAgentUrl2webId, webId2AuthorizationAgentUrl } from "./src/
 import { AccessApprovalHandler } from "./src/handlers/AccessApprovalHandler";
 import { ApplicationRegistration } from "solid-interoperability/src/data-management/data-model/agent-registration/application-registration"
 import { ApplicationAgent, SocialAgent } from "solid-interoperability";
-import { insertTurtleResource, readResource } from "./src/utils/modify-pod";
+import { deleteContainerResource, insertTurtleResource, readResource } from "./src/utils/modify-pod";
 import { serializeTurtle } from "./src/utils/turtle-serializer";
 import { ApplicationProfileDocument } from "./src/profile-documents/application-profile-document";
 import { DataAccessScope, DataAccessScopeAll } from "./src/application/data-access-scope";
@@ -401,6 +401,38 @@ pods_router.get("/:dataIRI/:webId", async (req, res) => {
 })
 
 
+/*
+Endpoint for deleting data from the Pod
+*/
+pods_router.delete("/:dataIRI/:webId", async (req, res) => {
+    const dataId: string = req.params.dataIRI;
+    const authorization: string = req.headers["Authorization"] as string;
+    const link: string = req.headers["Link"] as string;
+    const authorizationAgent: AuthorizationAgent | undefined = cache.get(req.params.webId);
+
+    if (!authorization || !link) {
+        return res.status(400).json({ error: "Both Authorization and Link headers are required." });
+    }
+
+    if (!authorizationAgent) {
+        return res.status(401).json({ error: "Invalid or expired authorization agent." });
+    }
+
+    try {
+        const linkValue = Link.parse(link);
+
+        if (linkValue.refs.length === 1) {
+            const dataInstanceIRI: string = linkValue.refs[0].uri + '/' + dataId;
+            deleteContainerResource(authorizationAgent.session.fetch, dataInstanceIRI);
+            res.status(200).json({ success: true });
+        } else {
+            res.status(400).json({ error: "Only one Link header is allowed." });
+        }
+    } catch (error) {
+        console.error("Error processing the delete request:", error);
+        res.status(500).json({ error: "Internal Server Error" });
+    }
+})
 
 const projectron_router = express.Router()
 app.use('/projectron', projectron_router);

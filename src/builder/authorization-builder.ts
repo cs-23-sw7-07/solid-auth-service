@@ -1,8 +1,9 @@
 import {
-  AccessAuthorization,
-  Agent,
-  DataAuthorization,
-  RdfFactory,
+    AccessAuthorization,
+    Agent,
+    DataAuthorization,
+    DataRegistration,
+    RdfFactory,
 } from "solid-interoperability";
 import { AuthorizationAgent } from "../authorization-agent";
 import { DataAccessScope } from "../application/data-access-scope";
@@ -11,48 +12,58 @@ import { insertTurtleResource, updateContainerResource } from "../utils/modify-p
 import N3 from "n3";
 const { Store, DataFactory } = N3;
 const { namedNode } = DataFactory;
+import { createContainer, updateContainerResource } from "../utils/modify-pod";
+import { parseTurtle } from "../utils/turtle-parser";
 
 export class AuthorizationBuilder {
-  private data_authorizations: Map<string, DataAuthorization> = new Map<
-    string,
-    DataAuthorization
-  >();
-  private access_authorizations!: AccessAuthorization;
+    private data_authorizations: Map<string, DataAuthorization> = new Map<
+        string,
+        DataAuthorization
+    >();
+    private access_authorizations!: AccessAuthorization;
 
-  constructor(
-    public authorizationAgent: AuthorizationAgent,
-    public grantee: Agent,
-  ) { }
+    constructor(
+        public authorizationAgent: AuthorizationAgent,
+        public grantee: Agent,
+    ) { }
 
-  generateId(): string {
-    return this.authorizationAgent.generateId(
-      this.authorizationAgent.AuthorizationRegistry_container,
-    );
-  }
-
-  async createDataAuthorizations(dataAccessScopes: DataAccessScope[]) {
-    for (const scope of dataAccessScopes) {
-      const data_authorizations = await scope.toDataAuthoization(this);
-      this.data_authorizations.set(
-        scope.accessNeed.uri,
-        data_authorizations,
-      );
+    generateId(): string {
+        return this.authorizationAgent.generateId(
+            this.authorizationAgent.AuthorizationRegistry_container,
+        );
     }
 
-  }
+    async createDataAuthorization(dataAccessScope: DataAccessScope) {
+        const shapeTree = dataAccessScope.accessNeed.getRegisteredShapeTree();
+        const dataRegs: DataRegistration[] = await this.authorizationAgent.getAllRegistrations();
+        const exists = dataRegs.some(dataReg => dataReg.registeredShapeTree === shapeTree);
 
-  getCreatedDataAuthorizations(): DataAuthorization[] {
-    return Array.from(this.data_authorizations.values());
-  }
+        if (!exists) {
+            const dataReg = new DataRegistration(
+                this.authorizationAgent.generateId(this.authorizationAgent.DataRegistry_container),
+                this.authorizationAgent.social_agent,
+                this.authorizationAgent.authorization_agent,
+                new Date(),
+                new Date(),
+                shapeTree
+            );
+            const fetch = this.authorizationAgent.session.fetch;
+            createContainer(fetch, dataReg.id);
+            const container_iri = dataReg.id + '.meta';
+            const dataset: string = await new RdfFactory().create(dataReg) as string;
+            const serializedDataset = (await parseTurtle(dataset, dataReg.id)).dataset;
+            updateContainerResource(this.authorizationAgent.session, container_iri, serializedDataset);
+        }
+        const data_authorization = await dataAccessScope.toDataAuthoization(this);
+        this.data_authorizations.set(
+            dataAccessScope.accessNeed.uri,
+            data_authorization,
+        );
+    }
 
-  async createAccessAuthorization(access_need_group: AccessNeedGroup) {
-    this.access_authorizations = await access_need_group.toAccessAuthorization(
-      this.generateId(),
-      this.authorizationAgent,
-      this.grantee,
-      this.getCreatedDataAuthorizations(),
-    );
-  }
+    getCreatedDataAuthorizations(): DataAuthorization[] {
+        return Array.from(this.data_authorizations.values());
+    }
 
   getCreatedAccessAuthorization(): AccessAuthorization {
     return this.access_authorizations!;
@@ -88,4 +99,12 @@ export class AuthorizationBuilder {
     );
   }
 
+    async createAccessAuthorization(access_need_group: AccessNeedGroup) {
+        this.access_authorizations = await access_need_group.toAccessAuthorization(
+            this.generateId(),
+            this.authorizationAgent,
+            this.grantee,
+            this.getCreatedDataAuthorizations(),
+        );
+    }
 }

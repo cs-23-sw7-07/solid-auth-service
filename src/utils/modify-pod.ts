@@ -59,10 +59,9 @@ export async function createContainer(fetch: Fetch, uri_container: string) {
 
 async function insertPatch(dataset: DatasetCore): Promise<string> {
     return `
+      PREFIX interop: <http://www.w3.org/ns/solid/interop#>
       INSERT DATA {
-        ${await serializeTurtle(dataset, {
-            interop: "http://www.w3.org/ns/solid/interop#",
-        })}
+        ${await serializeTurtle(dataset, {})}
       }
     `;
 }
@@ -72,14 +71,18 @@ export async function updateContainerResource(
     container_iri: string,
     dataset: DatasetCore,
 ) {
+    const body = await insertPatch(dataset)
     await fetch(container_iri, {
         method: "PATCH",
-        body: await insertPatch(dataset),
+        body: body,
         headers: {
             "Content-Type": "application/sparql-update",
         },
     }).then(res => {
         if (!res.ok) {
+            const a = res.body
+            const b = res.headers
+            const c = res.statusText
             throw new Error(`failed to patch ${container_iri}`);
         }
     });

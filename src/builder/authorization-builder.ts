@@ -59,14 +59,18 @@ export class AuthorizationBuilder {
                 new Date(),
                 shapeTree,
             );
+
             const fetch = this.authorizationAgent.session.fetch;
             createContainer(fetch, dataReg.id);
             const container_iri = dataReg.id + ".meta";
+
             const dataset: string = (await new RdfFactory().create(
                 dataReg,
             )) as string;
+
             const serializedDataset = (await parseTurtle(dataset, dataReg.id))
                 .dataset;
+                
             updateContainerResource(
                 this.authorizationAgent.session.fetch,
                 container_iri,

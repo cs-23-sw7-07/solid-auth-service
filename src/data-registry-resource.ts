@@ -1,4 +1,4 @@
-import N3, { Prefixes } from "n3";
+import N3, { Prefixes, Store } from "n3";
 import { RdfDocument } from "./rdf-document";
 import { DatasetCore } from "@rdfjs/types";
 import { parseTurtle } from "./utils/turtle-parser";
@@ -39,10 +39,7 @@ export class DataRegistryResource extends RdfDocument {
         const factory = new RdfFactory()
         let regs = [];
         for (const uri of values) {
-            const reg = await fetch(uri)
-            .then(res => res.text())
-            .then(res => factory.parse(fetch, res))
-            .then(args => DataRegistration.makeDataRegistration(args))
+            const reg = await factory.parse(fetch, uri).then(args => DataRegistration.makeDataRegistration(args))
             regs.push(reg)
         }
 
@@ -50,11 +47,19 @@ export class DataRegistryResource extends RdfDocument {
     }
 
     async addHasDataRegistration(fetch: Fetch, data_registration: DataRegistration) {
-        this.dataset.add(quad(namedNode(this.uri), namedNode("interop:hasDataRegistration"), namedNode(data_registration.id)))
-        await this.updateResource(fetch)
+        const quad_data_reg = quad(namedNode(this.uri), namedNode("interop:hasDataRegistration"), namedNode(data_registration.id))
+        const store = new Store()
+        
+        store.add(quad_data_reg)
+
+        await this.updateResource(fetch, store).then(_ => {
+            this.dataset.add(quad_data_reg)
+        })
+        
     }
 
-    private async updateResource(fetch: Fetch) {
+
+    private async updateResource(fetch: Fetch, dataset: DatasetCore) {
         updateContainerResource(fetch,
             this.uri + ".meta",
             this.dataset,

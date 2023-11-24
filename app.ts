@@ -33,7 +33,7 @@ export const protocol = `http${useHttps ? "s" : ""}://`;
 const private_key = process.env.PRIVATEKEY ?? "";
 const certificate = process.env.CERTIFICATE ?? "";
 
-const oidcIssuers = ["https://login.inrupt.com", "https://solidweb.me", "https://solidcommunity.net"]
+const oidcIssuers = ["https://login.inrupt.com", "https://solidweb.me", "https://solidcommunity.net", "http://localhost:3000/"]
 
 type WebId = string;
 const cache = new Map<WebId, AuthorizationAgent>();
@@ -60,11 +60,11 @@ if (useHttps) {
     const server = https.createServer(options, app);
 
     server.listen(port, hostname, () => {
-        console.log(`Server running at https://${hostname}:${port}/`);
+        console.log(`Server running at https://${address}:${port}`);
     });
 } else {
     app.listen(port, hostname, () => {
-        console.log(`Server running at http://${hostname}:${port}/`);
+        console.log(`Server running at http://${address}:${port}/agents/new`);
     });
 }
 
@@ -73,7 +73,7 @@ app.use('/agents', authorization_router);
 
 authorization_router.get("/new", async (req, res) => {
     // 1. Create a new Session
-    const session = new Session({ storage: new RedisSolidStorage() });
+    const session = new Session(/* { storage: new RedisSolidStorage() }*/);
     req.session!.sessionId = session.info.sessionId;
     const redirectToSolidIdentityProvider = (url: string) => {
         // Since we use Express in this example, we can call `res.redirect` to send the user to the
@@ -90,7 +90,7 @@ authorization_router.get("/new", async (req, res) => {
         // appended as query parameters:
         redirectUrl: `${protocol}${address}:${port}/agents/new/callback`,
         // Set to the user's Solid Identity Provider; e.g., "https://login.inrupt.com"
-        oidcIssuer: oidcIssuers[2],
+        oidcIssuer: oidcIssuers[3],
         // Pick an application name that will be shown when asked
         // to approve the application's access to the requested data.
         clientName: "Authorization Agent",
@@ -173,7 +173,7 @@ authorization_router.get("/new/callback", async (req, res) => {
             const profile_document: SocialAgentProfileDocument = await SocialAgentProfileDocument.getProfileDocument(webId);
 
             if (!profile_document.hasAuthorizationAgent(agent_URI))
-                profile_document.addhasAuthorizationAgent(agent_URI);
+                profile_document.addhasAuthorizationAgent(agent_URI, session.fetch);
 
             const pods = await getPodUrlAll(webId, { fetch: session!.fetch });
             authAgent = new AuthorizationAgent(new SocialAgent(webId), new ApplicationAgent(agent_URI), pods[0], session);

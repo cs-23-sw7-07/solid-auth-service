@@ -46,6 +46,7 @@ export class AuthorizationAgent {
             await SocialAgentProfileDocument.getProfileDocument(
                 this.social_agent.webID,
             );
+
         if (profile_document.hasRegistrySet()) {
             const set = await profile_document.getRegistrySet(
                 this.session.fetch,
@@ -61,40 +62,39 @@ export class AuthorizationAgent {
             this.AuthorizationRegistry_container =
                 this.registries_container + "accessregisties/";
             this.DataRegistry_container = this.pod + "data/";
-            profile_document.addhasRegistrySet(this.registries_container);
-            profile_document.updateProfile(this.session);
+            profile_document.addhasRegistrySet(this.registries_container, this.session.fetch);
             this.createRegistriesSet();
         }
     }
 
     async createRegistriesSet() {
-        createContainer(this.session.fetch, this.registries_container);
-        createContainer(this.session.fetch, this.AgentRegistry_container);
-        createContainer(
+        await createContainer(this.session.fetch, this.registries_container);
+        await createContainer(this.session.fetch, this.AgentRegistry_container);
+        await createContainer(
             this.session.fetch,
             this.AuthorizationRegistry_container,
         );
-        createContainer(this.session.fetch, this.DataRegistry_container);
+        await createContainer(this.session.fetch, this.DataRegistry_container);
 
         const registries_store = new Store();
         registries_store.addQuad(
             namedNode(this.registries_container),
             namedNode(type_a),
-            namedNode("interop:RegistrySet"),
+            namedNode(INTEROP + "RegistrySet"),
         );
         registries_store.addQuad(
             namedNode(this.registries_container),
-            namedNode("interop:hasAgentRegistry"),
+            namedNode(INTEROP + "hasAgentRegistry"),
             namedNode(this.AgentRegistry_container),
         );
         registries_store.addQuad(
             namedNode(this.registries_container),
-            namedNode("interop:hasAuthorizationRegistry"),
+            namedNode(INTEROP + "hasAuthorizationRegistry"),
             namedNode(this.AuthorizationRegistry_container),
         );
         registries_store.addQuad(
             namedNode(this.registries_container),
-            namedNode("interop:hasDataRegistry"),
+            namedNode(INTEROP + "hasDataRegistry"),
             namedNode(this.DataRegistry_container),
         );
 

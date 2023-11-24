@@ -42,7 +42,7 @@ export class SocialAgentProfileDocument extends RdfDocument {
         );
     }
 
-    addhasAuthorizationAgent(agent_URI: string) {
+    async addhasAuthorizationAgent(agent_URI: string, fetch: Fetch) {
         this.dataset.add(
             quad(
                 this.getSubjectWebId(),
@@ -51,6 +51,7 @@ export class SocialAgentProfileDocument extends RdfDocument {
                 defaultGraph(),
             ),
         );
+        await this.updateProfile(fetch)
     }
 
     hasRegistrySet(): boolean {
@@ -70,7 +71,7 @@ export class SocialAgentProfileDocument extends RdfDocument {
             .then((parsed) => new RegistrySetResource(set, parsed.dataset));
     }
 
-    addhasRegistrySet(registries_container: string) {
+    async addhasRegistrySet(registries_container: string, fetch: Fetch) {
         this.dataset.add(
             quad(
                 this.getSubjectWebId(),
@@ -79,10 +80,11 @@ export class SocialAgentProfileDocument extends RdfDocument {
                 defaultGraph(),
             ),
         );
+        await this.updateProfile(fetch)
     }
 
-    async updateProfile(session: Session) {
-        await session.fetch(this.uri, {
+    private async updateProfile(fetch: Fetch) {
+        await fetch(this.uri, {
             method: "PUT",
             body: await serializeTurtle(this.dataset, {
                 interop: "http://www.w3.org/ns/solid/interop#",

@@ -8,7 +8,6 @@ export class RedisSolidStorage implements IStorage {
     public constructor(info?: RedisConnectionInfo) {
         this.client = Redis.createClient();
         console.log("Redis client created");
-        console.log(this.client.status);
     }
 
     async delete(key: string): Promise<void> {

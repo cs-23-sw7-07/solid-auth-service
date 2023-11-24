@@ -16,24 +16,18 @@ export class AccessNeed extends RdfDocument {
     ): Promise<AccessNeed> {
         return fetch(uri)
             .then((res) => {
-                // console.log(res)
                 return res.text();
             })
             .then((res) => {
-                // console.log(res);
                 const a = parseTurtle(res, uri);
-                // console.log(a);
                 return a;
             })
             .then((result) => {
-                // console.log(uri)
                 const a = new AccessNeed(
                     uri,
                     result.dataset.match(DataFactory.namedNode(uri)),
                     result.prefixes,
                 );
-                // console.log(a.getRegisteredShapeTree())
-                // console.log(a.dataset);
                 return a;
             });
     }

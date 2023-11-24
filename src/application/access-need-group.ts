@@ -23,27 +23,21 @@ export class AccessNeedGroup extends RdfDocument {
     ): Promise<AccessNeedGroup> {
         return fetch(uri)
             .then((res) => {
-                // console.log(res)
                 return res.text();
             })
             .then((res) => {
-                // console.log(res);
                 const a = parseTurtle(res, uri);
-                // console.log(a);
                 return a;
             })
             .then((result) => {
-                // console.log(uri)
                 const a = new AccessNeedGroup(
                     uri,
                     result.dataset.match(DataFactory.namedNode(uri)),
                     result.prefixes,
                 );
-                // console.log(a.dataset);
                 return a;
             })
             .catch((err) => {
-                // console.log(err)
                 throw new Error();
             });
     }

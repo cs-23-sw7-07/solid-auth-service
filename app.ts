@@ -235,10 +235,8 @@ authorization_router.post("/:webId/wants-access", async (req, res, next) => {
 
                 for (const group of needGroups) {
                     const needs = await group.getHasAccessNeed(fetch)
-                    console.log("Got needs then case: " + needs)
                     access.set(group, needs.map(accessNeed => new DataAccessScopeAll(accessNeed)))
                 }
-                console.log(access)
                 return access
             })
             .then(access => authorization_agent.newApplication(accessApprovalHandler.getApprovalStatus(new ApplicationAgent(client_id), access)))

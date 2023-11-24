@@ -198,7 +198,7 @@ authorization_router.head("/:webId", async (req, res) => {
     const authorization_agent: AuthorizationAgent = cache.get(authorizationAgentUrl2webId(req.params.webId))!
     const client_id: string = req.query.client_id as string
     try {
-        const registration: ApplicationRegistration = await authorization_agent.findAgentRegistration(client_id) as ApplicationRegistration
+        const registration: ApplicationRegistration = await authorization_agent.findAgentRegistrationInPod(client_id) as ApplicationRegistration
         res.status(200).send(JSON.stringify(registration));
     } catch (error) {
         res.status(400).send("No registration found for this WebId: " + req.params.webId);
@@ -228,7 +228,7 @@ authorization_router.post("/:webId/wants-access", async (req, res, next) => {
                 access.set(accessNeedGroup, dataAccessScopes);
             }
 
-            await authorizationAgent.newApplication(accessApprovalHandler.getApprovalStatus(new ApplicationAgent(clientId), access));
+            await authorizationAgent.insertNewAgentToPod(accessApprovalHandler.getApprovalStatus(new ApplicationAgent(clientId), access));
             res.status(202).send();
         } else {
             res.status(403).send('Your request got rejected');

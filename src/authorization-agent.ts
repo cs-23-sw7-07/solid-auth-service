@@ -6,7 +6,7 @@ import {
     readResource,
     updateContainerResource,
 } from "./utils/modify-pod";
-import { type_a, INTEROP, data_registration } from "./namespace";
+import { type_a, INTEROP } from "./namespace";
 import {
     AgentRegistration,
     ApplicationAgent,
@@ -39,7 +39,7 @@ export class AuthorizationAgent {
         public authorization_agent: ApplicationAgent,
         public pod: string,
         public session: Session,
-    ) {}
+    ) { }
 
     async setRegistriesSetContainer() {
         const profile_document: SocialAgentProfileDocument =
@@ -109,7 +109,7 @@ export class AuthorizationAgent {
         return uri + randomUUID();
     }
 
-    async newApplication(approval: Approval) {
+    async insertNewAgentToPod(approval: Approval) {
         let authBuilders: AuthorizationBuilder[] = [];
         for (const [needGroup, scopes] of approval.access) {
             const authBuilder = new AuthorizationBuilder(this, approval.agent);
@@ -145,30 +145,17 @@ export class AuthorizationAgent {
         );
     }
 
-    async findAgentRegistration(webId: string): Promise<AgentRegistration> {
-        const agent_registry_set = await readResource(
-            this.session,
+    async findAgentRegistrationInPod(webId: string): Promise<AgentRegistration> {
+        const turtle = await readResource(this.session, this.AgentRegistry_container);
+        const parse_result = await parseTurtle(turtle, this.AgentRegistry_container);
+        const agentRegistrySet = new RdfDocument(
             this.AgentRegistry_container,
-        )
-            .then((turtle) => parseTurtle(turtle, this.AgentRegistry_container))
-            .then(
-                (parse_result) =>
-                    new RdfDocument(
-                        this.AgentRegistry_container,
-                        parse_result.dataset,
-                        parse_result.prefixes,
-                    ),
-            );
-
-        const type = agent_registry_set.getTypeOfSubject();
-
-        const registration_type =
-            type == INTEROP + "Application"
-                ? INTEROP + "hasApplicationRegistration"
-                : INTEROP + "hasSocialAgentRegistration";
-
-        const registrations_iri: string[] | undefined =
-            agent_registry_set.getObjectValuesFromPredicate(registration_type);
+            parse_result.dataset,
+            parse_result.prefixes,
+        );
+        const type = agentRegistrySet.getTypeOfSubject();
+        const registration_type = getRegistrationTypes(type);
+        const registrations_iri: string[] | undefined = agentRegistrySet.getObjectValuesFromPredicate(registration_type);
 
         if (!registrations_iri) {
             throw new ApplicationRegistrationNotExist();
@@ -197,18 +184,18 @@ export class AuthorizationAgent {
         const reg = await agent_registration.find(
             async (reg) => (await reg).registeredAgent.webID == webId,
         );
-        if (reg)
-            return reg;
+        if (!reg)
+            throw new ApplicationRegistrationNotExist();
 
-        throw new ApplicationRegistrationNotExist();
+        return reg;
     }
 
     getAllDataRegistrations(): Promise<DataRegistration[]> {
         return DataRegistryResource.getResource(this.DataRegistry_container)
-                .then(data_registry => data_registry.getHasDataRegistrations(this.session.fetch))
+            .then(data_registry => data_registry.getHasDataRegistrations(this.session.fetch))
     }
 
-    getDataRegistrations(
+    async getDataRegistrations(
         shapeTree: string,
         dataOwner?: SocialAgent,
     ): Promise<DataRegistration[]> {
@@ -216,14 +203,16 @@ export class AuthorizationAgent {
             reg.registeredShapeTree == shapeTree;
 
         const pDataOwner = (dataReg: DataRegistration) => {
-            if (dataOwner) {
+            if (dataOwner)
                 return dataReg.registeredBy == dataOwner;
-            }
+
             return true;
         };
-
-        return this.getAllDataRegistrations().then((regs) =>
-            regs.filter((reg) => pShapeTree(reg) && pDataOwner(reg)),
-        );
+        const dataRegs = await this.getAllDataRegistrations();
+        return dataRegs.filter((reg) => pShapeTree(reg) && pDataOwner(reg));
     }
+}
+
+function getRegistrationTypes(type: string | undefined): string {
+    return type === INTEROP + "Application" ? INTEROP + "hasApplicationRegistration" : INTEROP + "hasSocialAgentRegistration";
 }

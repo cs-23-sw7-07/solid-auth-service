@@ -9,7 +9,6 @@ import { config } from "dotenv";
 import * as fs from "fs";
 import * as https from "https";
 import { AuthorizationAgent } from "./src/authorization-agent";
-import { ApplicationRegistrationNotExist } from "./src/application-registration-not-exist";
 import { getPodUrlAll } from "@inrupt/solid-client";
 import { SocialAgentProfileDocument } from "./src/profile-documents/social-agent-profile-document";
 import { authorizationAgentUrl2webId, webId2AuthorizationAgentUrl } from "./src/utils/uri-convert";
@@ -17,16 +16,12 @@ import { AccessApprovalHandler } from "./src/handlers/AccessApprovalHandler";
 import { ApplicationRegistration } from "solid-interoperability/src/data-management/data-model/agent-registration/application-registration"
 import { ApplicationAgent, SocialAgent } from "solid-interoperability";
 import { deleteContainerResource, insertTurtleResource, readResource } from "./src/utils/modify-pod";
-import { serializeTurtle } from "./src/utils/turtle-serializer";
 import { ApplicationProfileDocument } from "./src/profile-documents/application-profile-document";
 import { DataAccessScope, DataAccessScopeAll } from "./src/application/data-access-scope";
 import { AccessNeedGroup } from "./src/application/access-need-group";
 import Link from "http-link-header";
-import { parseTurtle } from "./src/utils/turtle-parser";
 import path from "path";
 import { RedisSolidStorage } from "./src/redis/redis-storage";
-import { AccessNeed } from "./src/application/access-need";
-import { DataFactory } from "n3";
 
 config();
 const app = express();
@@ -104,87 +99,96 @@ authorization_router.get("/new", async (req, res) => {
     // return turtle document with the redirecct endpoints
 })
 
-async function getAlreadyAuthorizationAgents() {
-    await getSessionIdFromStorageAll(new RedisSolidStorage())
-        .then(async sessionIds => {
-            for (const id of sessionIds) {
-                const session = await getSessionFromStorage(id, new RedisSolidStorage())
-                if (!session) {
-                    continue;
-                }
-                const webId = session.info.webId!
-                const agent_URI = webId2AuthorizationAgentUrl(webId)
-                const pods = await getPodUrlAll(webId, { fetch: session!.fetch })
+/**
+ * Gets the existing authorization agents if they exist in the cache when starting the service.
+ */
+async function getAuthorizationAgentsFromCache() {
+    try {
+        const sessionIds = await getSessionIdFromStorageAll(new RedisSolidStorage());
 
-                cache.set(webId, new AuthorizationAgent(new SocialAgent(webId), new ApplicationAgent(agent_URI), pods[0], session))
-                cache.get(webId)!.setRegistriesSetContainer()
-            }
-        })
+        for (const id of sessionIds) {
+            const session = await getSessionFromStorage(id, new RedisSolidStorage());
+
+            if (!session)
+                continue;
+
+            const webId = session.info.webId!;
+            const agent_URI = webId2AuthorizationAgentUrl(webId);
+            const pods = await getPodUrlAll(webId, { fetch: session.fetch });
+
+            cache.set(webId, new AuthorizationAgent(new SocialAgent(webId), new ApplicationAgent(agent_URI), pods[0], session));
+            cache.get(webId)!.setRegistriesSetContainer();
+        }
+    } catch (error) {
+        console.error("Error in getAuthorizationAgentsFromCache:", error);
+    }
 }
 
-async function removePrevoiusSession(webId: string, expectSessionId: string) {
-    await getSessionIdFromStorageAll(new RedisSolidStorage())
-        .then(async sessionIds => {
-            for (const id of sessionIds) {
-                if (id == expectSessionId) {
-                    continue;
-                }
-                const session = await getSessionFromStorage(id, new RedisSolidStorage())
-                if (!session) {
-                    continue;
-                }
-                if (session.info.webId! == webId) {
-                    session.logout()
-                }
-            }
-        })
+/**
+ * Used to removed the previous session
+ * @param webId Id for the Application
+ * @param expectSessionId The session id
+ */
+async function removePreviousSession(webId: string, expectSessionId: string) {
+    try {
+        const sessionIds = await getSessionIdFromStorageAll(new RedisSolidStorage());
+
+        for (const id of sessionIds.filter(id => id !== expectSessionId)) {
+            const session = await getSessionFromStorage(id, new RedisSolidStorage());
+
+            if (session && session.info.webId === webId)
+                session.logout();
+        }
+    } catch (error) {
+        console.error("Error in removePreviousSession:", error);
+    }
 }
+
 
 authorization_router.get("/new/callback", async (req, res) => {
-    // 3. If the user is sent back to the `redirectUrl` provided in step 2,
-    //    it means that the login has been initiated and can be completed. In
-    //    particular, initiating the login stores the session in storage,
-    //    which means it can be retrieved as follows.
-    const session = await getSessionFromStorage(req.session!.sessionId, new RedisSolidStorage());
+    try {
+        // 3. If the user is sent back to the `redirectUrl` provided in step 2,
+        //    it means that the login has been initiated and can be completed. In
+        //    particular, initiating the login stores the session in storage,
+        //    which means it can be retrieved as follows.
+        const session = await getSessionFromStorage(req.session!.sessionId, new RedisSolidStorage());
 
+        if (!session)
+            return res.sendStatus(403).send();
 
-    if (!session) {
-        return res.sendStatus(403).send()
-    }
+        // 4. With your session back from storage, you are now able to
+        //    complete the login process using the data appended to it as query
+        //    parameters in req.url by the Solid Identity Provider:
+        await session.handleIncomingRedirect(
+            `${req.protocol}://${req.get("host")}${req.originalUrl}`
+        );
 
-    // 4. With your session back from storage, you are now able to
-    //    complete the login process using the data appended to it as query
-    //    parameters in req.url by the Solid Identity Provider:
-    await session.handleIncomingRedirect(
-        `${req.protocol}://${req.get("host")}${req.originalUrl}`,
-    )
+        const webId = session.info.webId!;
+        removePreviousSession(webId, req.session!.sessionId);
 
-    // 5. `session` now contains an authenticated Session instance.
-    const webId = session.info.webId!
-    removePrevoiusSession(webId, req.session!.sessionId)
-    const authAgent = cache.get(webId)
-    if (authAgent) {
-        authAgent.session = session
-    }
-    else {
-        const agent_URI = webId2AuthorizationAgentUrl(webId)
-        const profile_document: SocialAgentProfileDocument = await SocialAgentProfileDocument.getProfileDocument(webId)
+        let authAgent = cache.get(webId);
 
-        if (!(profile_document.hasAuthorizationAgent(agent_URI))) {
-            profile_document.addhasAuthorizationAgent(agent_URI)
-        }
+        if (!authAgent) {
+            const agent_URI = webId2AuthorizationAgentUrl(webId);
+            const profile_document: SocialAgentProfileDocument = await SocialAgentProfileDocument.getProfileDocument(webId);
 
-        const pods = await getPodUrlAll(webId, { fetch: session!.fetch })
-        cache.set(webId, new AuthorizationAgent(new SocialAgent(webId), new ApplicationAgent(agent_URI), pods[0], session))
-        cache.get(webId)!.setRegistriesSetContainer()
-    }
+            if (!profile_document.hasAuthorizationAgent(agent_URI))
+                profile_document.addhasAuthorizationAgent(agent_URI);
 
+            const pods = await getPodUrlAll(webId, { fetch: session!.fetch });
+            authAgent = new AuthorizationAgent(new SocialAgent(webId), new ApplicationAgent(agent_URI), pods[0], session);
+            cache.set(webId, authAgent);
+            authAgent.setRegistriesSetContainer();
+        } else
+            authAgent.session = session;
 
-    if (session!.info.isLoggedIn) {
-        return res.send(`<p>Logged in with the WebID ${webId}. <a herf="localhost:3001/agents/new"></p>`);
+        if (session!.info.isLoggedIn)
+            return res.send(`<p>Logged in with the WebID ${webId}. <a href="localhost:3001/agents/new"></p>`);
+    } catch (error) {
+        console.error("Error in authorization_router callback:", error);
+        return res.status(500).send("Internal Server Error");
     }
 });
-
 
 /*
 The endpoint for requesting if a Application have access to the Pod.
@@ -201,61 +205,51 @@ authorization_router.head("/:webId", async (req, res) => {
     }
 })
 
-// async function a(){
-//     const s = fs.readFileSync("test/projectron.ttl", "utf-8")
-//     const client_id = "https://projectron.example/#id"
-//     const p = await parseTurtle(s, client_id)
-//     const a = new AccessNeed("http://localhost:3001/projectron/#need-project", p.dataset.match(DataFactory.namedNode("http://localhost:3001/projectron/#need-project")), p.prefixes)
-//     console.log(await serializeTurtle(a.dataset, {}))
-//     console.log(a.dataset)
-//     console.log(a.getRegisteredShapeTree())
-
-// }
-
-
 /*
 The endpoint for the Application wanting access to a Pod
 */
 authorization_router.post("/:webId/wants-access", async (req, res, next) => {
-    // await a()
-    const authorization_agent: AuthorizationAgent = cache.get(authorizationAgentUrl2webId(req.params.webId))!
-    const accessApprovalHandler = new AccessApprovalHandler();
+    try {
+        const authorizationAgent: AuthorizationAgent = cache.get(authorizationAgentUrl2webId(req.params.webId))!;
+        const accessApprovalHandler = new AccessApprovalHandler();
+        const clientId: string = req.query.client_id as string;
+        const approved: boolean = accessApprovalHandler.requestAccessApproval();
+        const fetch = authorizationAgent.session.fetch;
 
-    const client_id: string = req.query.client_id as string;
+        if (approved) {
+            const applicationProfileDocument = await ApplicationProfileDocument.getRdfDocument(clientId, fetch);
+            const accesNeedGroups = await applicationProfileDocument.gethasAccessNeedGroup(fetch);
 
-    const approved: boolean = accessApprovalHandler.requestAccessApproval();
+            const access = new Map<AccessNeedGroup, DataAccessScope[]>();
 
-    const fetch = authorization_agent.session.fetch;
+            for (const accessNeedGroup of accesNeedGroups) {
+                const accessNeeds = await accessNeedGroup.getHasAccessNeed(fetch);
+                const dataAccessScopes = accessNeeds.map(accessNeed => new DataAccessScopeAll(accessNeed));
+                access.set(accessNeedGroup, dataAccessScopes);
+            }
 
-    if (approved) {
-        ApplicationProfileDocument.getRdfDocument(client_id, fetch)
-            .then(applicationProfileDocument => applicationProfileDocument.gethasAccessNeedGroup(fetch))
-            .then(async needGroups => {
-                const access = new Map<AccessNeedGroup, DataAccessScope[]>();
-
-                for (const group of needGroups) {
-                    const needs = await group.getHasAccessNeed(fetch)
-                    access.set(group, needs.map(accessNeed => new DataAccessScopeAll(accessNeed)))
-                }
-                return access
-            })
-            .then(access => authorization_agent.newApplication(accessApprovalHandler.getApprovalStatus(new ApplicationAgent(client_id), access)))
-            .then(_ => res.status(202).send())
-            // .catch(err => res.status(500).send(err));
+            await authorizationAgent.newApplication(accessApprovalHandler.getApprovalStatus(new ApplicationAgent(clientId), access));
+            res.status(202).send();
+        } else {
+            res.status(403).send('Your request got rejected');
+        }
+    } catch (error) {
+        console.error("Error in /:webId/wants-access:", error);
+        res.status(500).send("Internal Server Error");
     }
-    else {
-        res.status(403).send('Your request got rejected');
-    }
-})
+});
 
+/**
+ * Redirect request for wanting access to a Pod
+ */
 authorization_router.get("/:webId/redirect", async (req, res) => {
     res.redirect(`/${req.params.webId}/wants-access`)
-})
+});
+
 
 
 const pods_router = express.Router()
 app.use('/pods', pods_router);
-
 /*
 Endpoint for inserting data into the Pod
 */
@@ -265,20 +259,18 @@ pods_router.put("/:dataId/:webId", async (req, res) => {
     const link: string = req.headers["Link"] as string;
     const authorizationAgent: AuthorizationAgent | undefined = cache.get(req.params.webId);
 
-    if (!authorization || !link) {
+    if (!authorization || !link)
         return res.status(400).json({ error: "Both Authorization and Link headers are required." });
-    }
 
-    if (!authorizationAgent) {
+    if (!authorizationAgent)
         return res.status(401).json({ error: "Invalid or expired authorization agent." });
-    }
 
     try {
         const linkValue = Link.parse(link);
 
         if (linkValue.refs.length === 1) {
             const dataInstanceIRI: string = linkValue.refs[0].uri + '/' + dataId;
-            insertTurtleResource(authorizationAgent.session, dataInstanceIRI, req.body);
+            await insertTurtleResource(authorizationAgent.session, dataInstanceIRI, req.body);
             res.status(200).json({ success: true });
         } else {
             res.status(400).json({ error: "Only one Link header is allowed." });
@@ -295,13 +287,18 @@ Endpoint for getting data from the Pod
 pods_router.get("/:dataIRI/:webId", async (req, res) => {
     const dataIRI: string = req.params.dataIRI;
     const authorizationAgent: AuthorizationAgent | undefined = cache.get(req.params.webId);
-    readResource(authorizationAgent!.session, dataIRI).then((data) => {
-        res.status(200).send(data);
-    }).catch((error) => {
-        res.status(500).json({ error: "Internal Server Error" });
-    });
-})
 
+    try {
+        if (!authorizationAgent)
+            throw new Error("Invalid or expired authorization agent.");
+
+        const data = await readResource(authorizationAgent.session, dataIRI);
+        res.status(200).send(data);
+    } catch (error) {
+        console.error("Error retrieving data from the Pod:", error);
+        res.status(500).json({ error: "Internal Server Error" });
+    }
+});
 
 /*
 Endpoint for deleting data from the Pod
@@ -312,20 +309,18 @@ pods_router.delete("/:dataIRI/:webId", async (req, res) => {
     const link: string = req.headers["Link"] as string;
     const authorizationAgent: AuthorizationAgent | undefined = cache.get(req.params.webId);
 
-    if (!authorization || !link) {
+    if (!authorization || !link)
         return res.status(400).json({ error: "Both Authorization and Link headers are required." });
-    }
 
-    if (!authorizationAgent) {
+    if (!authorizationAgent)
         return res.status(401).json({ error: "Invalid or expired authorization agent." });
-    }
 
     try {
         const linkValue = Link.parse(link);
 
         if (linkValue.refs.length === 1) {
             const dataInstanceIRI: string = linkValue.refs[0].uri + '/' + dataId;
-            deleteContainerResource(authorizationAgent.session.fetch, dataInstanceIRI);
+            await deleteContainerResource(authorizationAgent.session.fetch, dataInstanceIRI);
             res.status(200).json({ success: true });
         } else {
             res.status(400).json({ error: "Only one Link header is allowed." });
@@ -334,7 +329,7 @@ pods_router.delete("/:dataIRI/:webId", async (req, res) => {
         console.error("Error processing the delete request:", error);
         res.status(500).json({ error: "Internal Server Error" });
     }
-})
+});
 
 const projectron_router = express.Router()
 app.use('/projectron', projectron_router);
@@ -344,8 +339,8 @@ projectron_router.get("/", async (req, res) => {
         root: path.join(__dirname, "../")
     };
     return res.status(200).sendFile("test/projectron.ttl", options);
-})
+});
 
 export { app };
 
-getAlreadyAuthorizationAgents()
+getAuthorizationAgentsFromCache();

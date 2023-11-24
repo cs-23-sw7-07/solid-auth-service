@@ -1,4 +1,4 @@
-@prefix interop: <https://www.w3.org/ns/solid/interop#>.
+@prefix interop: <http://www.w3.org/ns/solid/interop#>.
 @prefix projectron: <http://localhost:3001/projectron/>.
 @prefix acme: <https://acme.example/>.
 @prefix acl: <https://www.w3.org/ns/auth/acl#>.
@@ -21,10 +21,10 @@ projectron:\#need-project
   a interop:AccessNeed ;
   interop:registeredShapeTree solidtrees:Project ;
   interop:accessNecessity interop:accessRequired ;
-  interop:accessMode acl:read, acl:write .
+  interop:accessMode acl:Read, acl:Write .
 projectron:\#need-issue
   a interop:AccessNeed ;
   interop:registeredShapeTree solidtrees:Issue ;
   interop:accessNecessity interop:accessRequired ;
-  interop:accessMode acl:read, acl:write ;
+  interop:accessMode acl:Read, acl:Write ;
   interop:inheritsFromNeed projectron:\#need-project .

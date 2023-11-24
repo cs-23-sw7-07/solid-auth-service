@@ -17,9 +17,11 @@ export async function insertTurtleResource(
                 "Content-Type": "text/turtle",
             },
         })
-        .then(res => {
+        .then((res) => {
             if (!res.ok) {
-                return new InsertResourceError(`Couldn't insert resource at ${uri}`)
+                return new InsertResourceError(
+                    `Couldn't insert resource at ${uri}`,
+                );
             }
         });
 }
@@ -36,7 +38,9 @@ export async function createContainer(fetch: Fetch, uri_container: string) {
 
     const response = await fetch(uri_container, requestOptions);
     if (!response.ok) {
-        throw new Error(`failed to create containers ${uri_container} ${response}`);
+        throw new Error(
+            `failed to create containers ${uri_container} ${response}`,
+        );
     }
 }
 
@@ -57,32 +61,33 @@ async function insertPatch(dataset: DatasetCore): Promise<string> {
     return `
       INSERT DATA {
         ${await serializeTurtle(dataset, {
-        interop: "http://www.w3.org/ns/solid/interop#",
-    })}
+            interop: "http://www.w3.org/ns/solid/interop#",
+        })}
       }
     `;
 }
 
 export async function updateContainerResource(
-    session: Session,
+    fetch: Fetch,
     container_iri: string,
     dataset: DatasetCore,
 ) {
-    const { ok } = await session.fetch(container_iri, {
+    await fetch(container_iri, {
         method: "PATCH",
         body: await insertPatch(dataset),
         headers: {
             "Content-Type": "application/sparql-update",
         },
+    }).then(res => {
+        if (!res.ok) {
+            throw new Error(`failed to patch ${container_iri}`);
+        }
     });
-    if (!ok) {
-        throw new Error(`failed to patch ${container_iri}`);
-    }
 }
 
 export async function deleteContainerResource(
     fetch: Fetch,
-    containerIRI: string 
+    containerIRI: string,
 ): Promise<void> {
     const { ok } = await fetch(containerIRI, {
         method: "DELETE",
@@ -93,24 +98,21 @@ export async function deleteContainerResource(
     }
 }
 
-
 export function readResource(session: Session, url: string): Promise<string> {
-    return session.fetch(url)
-        .then((res) => {
-            if (res.ok)
-                return res.text()
-            throw new ReadResourceError("Couldn't read the resource at " + url)
-        });
+    return session.fetch(url).then((res) => {
+        if (res.ok) return res.text();
+        throw new ReadResourceError("Couldn't read the resource at " + url);
+    });
 }
 
 class InsertResourceError extends Error {
     constructor(public message: string) {
-        super(message)
+        super(message);
     }
 }
 
 class ReadResourceError extends Error {
     constructor(public message: string) {
-        super(message)
+        super(message);
     }
 }

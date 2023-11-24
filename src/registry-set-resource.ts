@@ -4,23 +4,21 @@ import { Prefixes } from "n3";
 import { INTEROP } from "./namespace";
 
 export class RegistrySetResource extends RdfDocument {
-    constructor(
-        webId: string,
-        dataset?: DatasetCore,
-        prefixes?: Prefixes,
-      ) {
-        super(webId, dataset, prefixes)
-      }
+    constructor(webId: string, dataset?: DatasetCore, prefixes?: Prefixes) {
+        super(webId, dataset, prefixes);
+    }
 
-      gethasAgentRegistry(): string {
-        return this.getObjectValueFromPredicate(INTEROP + "hasAgentRegistry")!;
-      }
+    gethasAgentRegistry(): string | undefined {
+        return this.getObjectValueFromPredicate(INTEROP + "hasAgentRegistry");
+    }
 
-      gethasAuthorizationRegistry(): string {
-        return this.getObjectValueFromPredicate(INTEROP + "hasAuthorizationRegistry")!;
-      }
+    gethasAuthorizationRegistry(): string | undefined {
+        return this.getObjectValueFromPredicate(
+            INTEROP + "hasAuthorizationRegistry",
+        );
+    }
 
-      gethasDataRegistry(): string {
-        return this.getObjectValueFromPredicate(INTEROP + "hasDataRegistry")!;
-      }
+    gethasDataRegistry(): string | undefined {
+        return this.getObjectValueFromPredicate(INTEROP + "hasDataRegistry");
+    }
 }

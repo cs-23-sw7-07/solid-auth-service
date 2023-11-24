@@ -1,2 +1,1 @@
-
-export class ApplicationRegistrationNotExist extends Error { }
+export class ApplicationRegistrationNotExist extends Error {}

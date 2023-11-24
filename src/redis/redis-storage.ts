@@ -3,36 +3,36 @@ import { Redis } from "ioredis";
 import { RedisConnectionInfo } from "./redis-connection-info";
 
 export class RedisSolidStorage implements IStorage {
-  private client;
+    private client;
 
-  public constructor(info?: RedisConnectionInfo) {
-    this.client = Redis.createClient();
-    console.log("Redis client created")
-    console.log(this.client.status)
-  }
-
-  async delete(key: string): Promise<void> {
-    try {
-      const result = await this.client.del(key).then();
-      if (result > 0) return;
-
-      // ??
-    } catch (e) {}
-  }
-
-  async get(key: string): Promise<string | undefined> {
-    try {
-      const value = await this.client.get(key);
-      return value || undefined;
-    } catch (e) {
-      return undefined;
+    public constructor(info?: RedisConnectionInfo) {
+        this.client = Redis.createClient();
+        console.log("Redis client created");
+        console.log(this.client.status);
     }
-  }
 
-  async set(key: string, value: string): Promise<void> {
-    try {
-      const result = await this.client.set(key, value);
-      if (result === "OK") return;
-    } catch (e) {}
-  }
+    async delete(key: string): Promise<void> {
+        try {
+            const result = await this.client.del(key).then();
+            if (result > 0) return;
+
+            // ??
+        } catch (e) {}
+    }
+
+    async get(key: string): Promise<string | undefined> {
+        try {
+            const value = await this.client.get(key);
+            return value || undefined;
+        } catch (e) {
+            return undefined;
+        }
+    }
+
+    async set(key: string, value: string): Promise<void> {
+        try {
+            const result = await this.client.set(key, value);
+            if (result === "OK") return;
+        } catch (e) {}
+    }
 }

@@ -10,6 +10,6 @@ import { GrantScope } from "solid-interoperability";
  * criteria for determining access approval when inheriting the interface.
  */
 export interface IAccessApproval {
-  requestAccessApproval(): boolean;
-  getAccessScope(): GrantScope;
+    requestAccessApproval(): boolean;
+    getAccessScope(): GrantScope;
 }

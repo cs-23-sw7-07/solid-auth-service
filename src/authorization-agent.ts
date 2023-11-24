@@ -21,7 +21,7 @@ import { Approval } from "./application/approval";
 import { AuthorizationBuilder } from "./builder/authorization-builder";
 import { AgentRegistrationBuilder } from "./builder/application-registration-builder";
 import { RdfDocument } from "./rdf-document";
-import { ApplicationRegistrationNotExist } from "./application-registration-not-exist";
+import { ApplicationRegistrationNotExist } from "./errors/application-registration-not-exist";
 import { SocialAgentProfileDocument } from "./profile-documents/social-agent-profile-document";
 import { DataRegistryResource } from "./data-registry-resource";
 

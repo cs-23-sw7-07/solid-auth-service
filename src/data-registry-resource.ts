@@ -1,12 +1,11 @@
 import N3, { Prefixes } from "n3";
-import { Session } from "@inrupt/solid-client-authn-node";
 import { RdfDocument } from "./rdf-document";
 import { DatasetCore } from "@rdfjs/types";
 import { parseTurtle } from "./utils/turtle-parser";
 import { DataRegistration, Fetch, RdfFactory } from "solid-interoperability";
-import { INTEROP, data_registration } from "./namespace";
+import { data_registration } from "./namespace";
 import { updateContainerResource } from "./utils/modify-pod";
-const { quad, namedNode, defaultGraph } = N3.DataFactory;
+const { quad, namedNode} = N3.DataFactory;
 
 export class DataRegistryResource extends RdfDocument {
     constructor(webId: string, dataset?: DatasetCore, prefixes?: Prefixes) {
@@ -54,7 +53,6 @@ export class DataRegistryResource extends RdfDocument {
         this.dataset.add(quad(namedNode(this.uri), namedNode("interop:hasDataRegistration"), namedNode(data_registration.id)))
         await this.updateResource(fetch)
     }
-
 
     private async updateResource(fetch: Fetch) {
         updateContainerResource(fetch,

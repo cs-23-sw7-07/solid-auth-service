@@ -1,7 +1,7 @@
-import N3, { DataFactory, Prefixes, Store } from "n3";
+import { DataFactory, Prefixes, Store } from "n3";
 import { DatasetCore } from "@rdfjs/types";
 import { Fetch } from "solid-interoperability";
-import { ParserResult, parseTurtle } from "./utils/turtle-parser";
+import { parseTurtle } from "./utils/turtle-parser";
 const { namedNode } = DataFactory;
 
 export class RdfDocument {

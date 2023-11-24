@@ -1,7 +1,6 @@
 import { Agent, GrantScope } from "solid-interoperability";
 import { IAccessApproval } from "../interfaces/IAccessApproval";
 import { Approval } from "../application/approval";
-import { ApplicationProfileDocument } from "../profile-documents/application-profile-document";
 import { AccessNeedGroup } from "../application/access-need-group";
 import { DataAccessScope } from "../application/data-access-scope";
 

@@ -73,7 +73,7 @@ app.use('/agents', authorization_router);
 
 authorization_router.get("/new", async (req, res) => {
     // 1. Create a new Session
-    const session = new Session(/* { storage: new RedisSolidStorage() }*/);
+    const session = new Session({ storage: new RedisSolidStorage() });
     req.session!.sessionId = session.info.sessionId;
     const redirectToSolidIdentityProvider = (url: string) => {
         // Since we use Express in this example, we can call `res.redirect` to send the user to the

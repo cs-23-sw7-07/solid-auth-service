@@ -130,8 +130,8 @@ export class AuthorizationAgent {
 
         const predicate =
             approval.agent instanceof ApplicationAgent
-                ? "interop:hasApplicationRegistration"
-                : "interop:hasSocialAgentRegistration";
+                ? INTEROP + "hasApplicationRegistration"
+                : INTEROP + "hasSocialAgentRegistration";
         const AgentRegistry_store = new Store();
         AgentRegistry_store.addQuad(
             namedNode(this.AgentRegistry_container),

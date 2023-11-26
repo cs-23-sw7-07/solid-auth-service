@@ -3,7 +3,7 @@ import { RdfDocument } from "./rdf-document";
 import { DatasetCore } from "@rdfjs/types";
 import { parseTurtle } from "./utils/turtle-parser";
 import { DataRegistration, Fetch, RdfFactory } from "solid-interoperability";
-import { data_registration } from "./namespace";
+import { INTEROP, data_registration } from "./namespace";
 import { updateContainerResource } from "./utils/modify-pod";
 const { quad, namedNode} = N3.DataFactory;
 
@@ -47,7 +47,7 @@ export class DataRegistryResource extends RdfDocument {
     }
 
     async addHasDataRegistration(fetch: Fetch, data_registration: DataRegistration) {
-        const quad_data_reg = quad(namedNode(this.uri), namedNode("interop:hasDataRegistration"), namedNode(data_registration.id))
+        const quad_data_reg = quad(namedNode(this.uri), namedNode(INTEROP + "hasDataRegistration"), namedNode(data_registration.id))
         const store = new Store()
         
         store.add(quad_data_reg)
@@ -62,7 +62,7 @@ export class DataRegistryResource extends RdfDocument {
     private async updateResource(fetch: Fetch, dataset: DatasetCore) {
         updateContainerResource(fetch,
             this.uri + ".meta",
-            this.dataset,
+            dataset,
         );
     }
 }

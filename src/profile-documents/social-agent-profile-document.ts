@@ -34,7 +34,7 @@ export class SocialAgentProfileDocument extends RdfDocument {
 
     hasAuthorizationAgent(authorization_uri: string): boolean {
         const authorization_agents = this.getObjectValuesFromPredicate(
-            "http://www.w3.org/ns/solid/interop#hasAuthorizationAgent",
+            INTEROP + "hasAuthorizationAgent",
         );
         return (
             authorization_agents != undefined &&
@@ -46,7 +46,7 @@ export class SocialAgentProfileDocument extends RdfDocument {
         this.dataset.add(
             quad(
                 this.getSubjectWebId(),
-                namedNode("interop:hasAuthorizationAgent"),
+                namedNode(INTEROP + "hasAuthorizationAgent"),
                 namedNode(agent_URI),
                 defaultGraph(),
             ),
@@ -75,7 +75,7 @@ export class SocialAgentProfileDocument extends RdfDocument {
         this.dataset.add(
             quad(
                 this.getSubjectWebId(),
-                namedNode("interop:hasRegistrySet"),
+                namedNode(INTEROP + "hasRegistrySet"),
                 namedNode(registries_container),
                 defaultGraph(),
             ),
@@ -87,7 +87,7 @@ export class SocialAgentProfileDocument extends RdfDocument {
         await fetch(this.uri, {
             method: "PUT",
             body: await serializeTurtle(this.dataset, {
-                interop: "http://www.w3.org/ns/solid/interop#",
+                interop: INTEROP,
             }),
             headers: {
                 "Content-Type": "text/turtle",

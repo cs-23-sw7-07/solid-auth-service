@@ -37,6 +37,7 @@ export async function createRegistriesSet(fetch: Fetch, pod: string, profile_doc
     const AuthorizationRegistry_container =
             registries_container + "accessregisties/";
     const DataRegistry_container = pod + "data/";
+    
     await createContainer(fetch, registries_container);
     await createContainer(fetch, AgentRegistry_container);
     await createContainer(

@@ -1,10 +1,10 @@
 import { DataFactory, Prefixes, Store } from "n3";
 import { DatasetCore } from "@rdfjs/types";
 import { Fetch } from "solid-interoperability";
-import { parseTurtle } from "./utils/turtle-parser";
+import { readParseResource, updateContainerResource } from "./utils/modify-pod";
 const { namedNode } = DataFactory;
 
-export class RdfDocument {
+export class RDFResource {
     dataset: DatasetCore = new Store();
     prefixes: Prefixes = {};
 
@@ -17,11 +17,9 @@ export class RdfDocument {
         if (prefixes) this.prefixes = prefixes;
     }
 
-    static getRdfDocument(uri: string, fetch: Fetch): Promise<RdfDocument> {
-        return fetch(uri)
-            .then((res) => res.text())
-            .then((res) => parseTurtle(res, uri))
-            .then((result) => new RdfDocument(uri, result.dataset, result.prefixes));
+    static async getResource(fetch: Fetch, uri: string): Promise<RDFResource> {
+        return readParseResource(fetch, uri)
+            .then((result) => new RDFResource(uri, result.dataset, result.prefixes));
     }
 
     getTypeOfSubject(): string | undefined {
@@ -44,5 +42,28 @@ export class RdfDocument {
         }
 
         return values.length != 0 ? values : undefined;
+    }
+
+    protected async updateResource(fetch: Fetch, dataset: DatasetCore) {
+        updateContainerResource(fetch, this.uri, dataset);
+    }
+}
+
+export class RDFResourceContainer extends RDFResource {
+    constructor(
+        uri: string,
+        dataset?: DatasetCore,
+        prefixes?: Prefixes,
+    ) {
+        super(uri, dataset, prefixes);
+    }
+
+    static async getResource(fetch: Fetch, uri: string): Promise<RDFResourceContainer> {
+        return readParseResource(fetch, uri)
+            .then((result) => new RDFResourceContainer(uri, result.dataset, result.prefixes));
+    }
+
+    protected async updateResource(fetch: Fetch, dataset: DatasetCore) {
+        updateContainerResource(fetch, this.uri + ".meta", dataset);
     }
 }

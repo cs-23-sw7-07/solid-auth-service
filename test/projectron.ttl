@@ -22,9 +22,3 @@ projectron:\#need-project
   interop:registeredShapeTree solidtrees:Project ;
   interop:accessNecessity interop:accessRequired ;
   interop:accessMode acl:Read, acl:Write .
-projectron:\#need-issue
-  a interop:AccessNeed ;
-  interop:registeredShapeTree solidtrees:Issue ;
-  interop:accessNecessity interop:accessRequired ;
-  interop:accessMode acl:Read, acl:Write ;
-  interop:inheritsFromNeed projectron:\#need-project .

@@ -200,6 +200,7 @@ authorization_router.head("/:webId", async (req, res) => {
         const registration: ApplicationRegistration = await authorization_agent.findAgentRegistrationInPod(client_id) as ApplicationRegistration
         res.status(200).send(JSON.stringify(registration));
     } catch (error) {
+        console.error(error)
         res.status(400).send("No registration found for this WebId: " + req.params.webId);
     }
 })

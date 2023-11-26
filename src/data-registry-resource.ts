@@ -1,21 +1,18 @@
 import N3, { Prefixes, Store } from "n3";
-import { RdfDocument } from "./rdf-document";
+import { RDFResourceContainer } from "./rdf-document";
 import { DatasetCore } from "@rdfjs/types";
-import { parseTurtle } from "./utils/turtle-parser";
 import { DataRegistration, Fetch, RdfFactory } from "solid-interoperability";
 import { INTEROP, data_registration } from "./namespace";
-import { updateContainerResource } from "./utils/modify-pod";
+import { readParseResource } from "./utils/modify-pod";
 const { quad, namedNode } = N3.DataFactory;
 
-export class DataRegistryResource extends RdfDocument {
+export class DataRegistryResource extends RDFResourceContainer {
     constructor(webId: string, dataset?: DatasetCore, prefixes?: Prefixes) {
         super(webId, dataset, prefixes);
     }
 
-    static async getResource(uri: string): Promise<DataRegistryResource> {
-        return fetch(uri)
-            .then((res) => res.text())
-            .then((res) => parseTurtle(res, uri))
+    static async getResource(fetch: Fetch, uri: string): Promise<DataRegistryResource> {
+        return readParseResource(fetch, uri)
             .then((result) => new DataRegistryResource(uri, result.dataset, result.prefixes));
     }
 
@@ -49,9 +46,5 @@ export class DataRegistryResource extends RdfDocument {
         await this.updateResource(fetch, store).then((_) => {
             this.dataset.add(quad_data_reg);
         });
-    }
-
-    private async updateResource(fetch: Fetch, dataset: DatasetCore) {
-        updateContainerResource(fetch, this.uri + ".meta", dataset);
     }
 }

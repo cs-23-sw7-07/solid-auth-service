@@ -1,6 +1,7 @@
 import { DatasetCore } from "@rdfjs/types";
 import { serializeTurtle } from "./turtle-serializer";
 import { Fetch } from "solid-interoperability";
+import { ParserResult, parseTurtle } from "./turtle-parser";
 
 export async function insertTurtleResource(fetch: Fetch, uri: string, document_rdf: string) {
     await fetch(uri, {
@@ -89,6 +90,12 @@ export function readResource(fetch: Fetch, url: string): Promise<string> {
         if (res.ok) return res.text();
         throw new ReadResourceError("Couldn't read the resource at " + url);
     });
+}
+
+export function readParseResource(fetch: Fetch, url: string): Promise<ParserResult> {
+    return fetch(url)
+    .then((res) => res.text())
+    .then((res) => parseTurtle(res, url))
 }
 
 class InsertResourceError extends Error {

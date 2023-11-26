@@ -3,7 +3,7 @@ import { Session } from "@inrupt/solid-client-authn-node";
 import { parseTurtle } from "../utils/turtle-parser";
 import { serializeTurtle } from "../utils/turtle-serializer";
 import { DatasetCore } from "@rdfjs/types";
-import { RdfDocument } from "../rdf-document";
+import { RDFResource } from "../rdf-document";
 import { INTEROP } from "../namespace";
 import { Fetch } from "solid-interoperability";
 import { RegistrySetResource } from "../registry-set-resource";
@@ -11,7 +11,7 @@ const { quad, namedNode, defaultGraph } = N3.DataFactory;
 
 const oidcIssuer_PREDICATE = "http://www.w3.org/ns/solid/terms#oidcIssuer";
 
-export class SocialAgentProfileDocument extends RdfDocument {
+export class SocialAgentProfileDocument extends RDFResource {
     constructor(webId: string, dataset?: DatasetCore, prefixes?: Prefixes) {
         super(webId, dataset, prefixes);
     }

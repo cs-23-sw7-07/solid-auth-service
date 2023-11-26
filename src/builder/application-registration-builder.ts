@@ -59,11 +59,11 @@ export class AgentRegistrationBuilder {
         const session: Session = this.authorization_agent.session;
         const factory: RdfFactory = new RdfFactory();
         for (const grant of this.data_grants) {
-            await insertTurtleResource(session, grant.id, await factory.create(grant));
+            await insertTurtleResource(session.fetch, grant.id, await factory.create(grant));
         }
 
         for (const grant of this.access_grants) {
-            await insertTurtleResource(session, grant.id, await factory.create(grant));
+            await insertTurtleResource(session.fetch, grant.id, await factory.create(grant));
         }
 
         const registration_turtle = await factory.create(this.registration);

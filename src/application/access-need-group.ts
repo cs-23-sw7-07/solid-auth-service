@@ -1,5 +1,5 @@
 import { AccessAuthorization, Agent, DataAuthorization, Fetch } from "solid-interoperability";
-import { RdfDocument } from "../rdf-document";
+import { RDFResource } from "../rdf-document";
 import { INTEROP } from "../namespace";
 import { AccessNeed } from "./access-need";
 import { AuthorizationAgent } from "../authorization-agent";
@@ -7,7 +7,7 @@ import { parseTurtle } from "../utils/turtle-parser";
 import { DatasetCore } from "@rdfjs/types";
 import { DataFactory, Prefixes } from "n3";
 
-export class AccessNeedGroup extends RdfDocument {
+export class AccessNeedGroup extends RDFResource {
     constructor(uri: string, dataset?: DatasetCore, prefixes?: Prefixes) {
         super(uri, dataset, prefixes);
     }

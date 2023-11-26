@@ -1,5 +1,5 @@
 import { DatasetCore } from "@rdfjs/types";
-import { RdfDocument } from "./rdf-document";
+import { RDFResource } from "./rdf-document";
 import { Prefixes, Store } from "n3";
 import N3 from "n3";
 import { INTEROP, type_a } from "./namespace";
@@ -10,7 +10,7 @@ import { SocialAgentProfileDocument } from "./profile-documents/social-agent-pro
 const { DataFactory } = N3;
 const { namedNode } = DataFactory;
 
-export class RegistrySetResource extends RdfDocument {
+export class RegistrySetResource extends RDFResource {
     constructor(iri: string, dataset?: DatasetCore, prefixes?: Prefixes) {
         super(iri, dataset, prefixes);
     }

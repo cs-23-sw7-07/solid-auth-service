@@ -1,12 +1,12 @@
-import { Fetch, SocialAgent } from "solid-interoperability";
-import { RdfDocument } from "../rdf-document";
+import { Fetch } from "solid-interoperability";
+import { RDFResource } from "../rdf-document";
 import { INTEROP } from "../namespace";
 import { AccessNeedGroup } from "../application/access-need-group";
 import { DatasetCore } from "@rdfjs/types";
 import { DataFactory, Prefixes } from "n3";
 import { parseTurtle } from "../utils/turtle-parser";
 
-export class ApplicationProfileDocument extends RdfDocument {
+export class ApplicationProfileDocument extends RDFResource {
     constructor(webId: string, dataset?: DatasetCore, prefixes?: Prefixes) {
         super(webId, dataset, prefixes);
     }

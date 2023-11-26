@@ -1,24 +1,21 @@
 import { DatasetCore } from "@rdfjs/types";
-import { RdfDocument } from "./rdf-document";
+import { RDFResource } from "./rdf-document";
 import { Prefixes, Store } from "n3";
 import N3 from "n3";
 import { INTEROP } from "./namespace";
 import { Agent, AgentRegistration, ApplicationAgent, Fetch } from "solid-interoperability";
-import { updateContainerResource } from "./utils/modify-pod";
-import { parseTurtle } from "./utils/turtle-parser";
+import { readParseResource } from "./utils/modify-pod";
 
 const { DataFactory } = N3;
 const { namedNode } = DataFactory;
 
-export class AgentRegistryResource extends RdfDocument {
+export class AgentRegistryResource extends RDFResource {
     constructor(iri: string, dataset?: DatasetCore, prefixes?: Prefixes) {
         super(iri, dataset, prefixes);
     }
 
-    static async getResource(uri: string): Promise<AgentRegistryResource> {
-        return fetch(uri)
-            .then((res) => res.text())
-            .then((res) => parseTurtle(res, uri))
+    static async getResource(fetch: Fetch, uri: string): Promise<AgentRegistryResource> {
+        return readParseResource(fetch, uri)
             .then((parse) => new AgentRegistryResource(uri, parse.dataset, parse.prefixes));
     }
 
@@ -46,9 +43,5 @@ export class AgentRegistryResource extends RdfDocument {
 
     gethasDataRegistry(): string | undefined {
         return this.getObjectValueFromPredicate(INTEROP + "hasDataRegistry");
-    }
-
-    private async updateResource(fetch: Fetch, dataset: DatasetCore) {
-        updateContainerResource(fetch, this.uri + ".meta", dataset);
     }
 }

@@ -16,12 +16,13 @@ import { parseTurtle } from "./utils/turtle-parser";
 import { Approval } from "./application/approval";
 import { AuthorizationBuilder } from "./builder/authorization-builder";
 import { AgentRegistrationBuilder } from "./builder/application-registration-builder";
-import { RdfDocument } from "./rdf-document";
+import { RDFResource } from "./rdf-document";
 import { ApplicationRegistrationNotExist } from "./errors/application-registration-not-exist";
 import { SocialAgentProfileDocument } from "./profile-documents/social-agent-profile-document";
 import { DataRegistryResource } from "./data-registry-resource";
 import { RegistrySetResource, createRegistriesSet } from "./registry-set-resource";
 import { AgentRegistryResource } from "./agent-registry-resource";
+import { ApplicationProfileDocument } from "./profile-documents/application-profile-document";
 
 export class AuthorizationAgent {
     AgentRegistry_container!: string;
@@ -78,7 +79,7 @@ export class AuthorizationAgent {
         await builder.build(approval.agent, authBuilders);
         await builder.storeToPod();
 
-        const agent_registry = await AgentRegistryResource.getResource(
+        const agent_registry = await AgentRegistryResource.getResource(this.session.fetch,
             this.AgentRegistry_container,
         );
         await agent_registry.addRegistration(
@@ -89,14 +90,10 @@ export class AuthorizationAgent {
     }
 
     async findAgentRegistrationInPod(webId: string): Promise<AgentRegistration> {
-        const turtle = await readResource(this.session.fetch, this.AgentRegistry_container);
-        const parse_result = await parseTurtle(turtle, this.AgentRegistry_container);
-        const agentRegistrySet = new RdfDocument(
-            this.AgentRegistry_container,
-            parse_result.dataset,
-            parse_result.prefixes,
-        );
-        const type = agentRegistrySet.getTypeOfSubject();
+        const agentRegistrySet = await AgentRegistryResource.getResource(this.session.fetch, this.AgentRegistry_container)
+        const profile_document: ApplicationProfileDocument =
+            await ApplicationProfileDocument.getRdfDocument(webId, this.session.fetch);
+        const type = profile_document.getTypeOfSubject();
         const registration_type = getRegistrationTypes(type);
         const registrations_iri: string[] | undefined =
             agentRegistrySet.getObjectValuesFromPredicate(registration_type);
@@ -110,7 +107,7 @@ export class AuthorizationAgent {
             async (iri) =>
                 await factory.parse(
                     this.session.fetch,
-                    await readResource(this.session.fetch, iri),
+                    iri,
                 ),
         );
 
@@ -134,7 +131,7 @@ export class AuthorizationAgent {
     }
 
     getAllDataRegistrations(): Promise<DataRegistration[]> {
-        return DataRegistryResource.getResource(this.DataRegistry_container).then((data_registry) =>
+        return DataRegistryResource.getResource(this.session.fetch, this.DataRegistry_container).then((data_registry) =>
             data_registry.getHasDataRegistrations(this.session.fetch),
         );
     }

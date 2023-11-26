@@ -99,12 +99,12 @@ export class AuthorizationBuilder {
     async storeToPod() {
         this.getCreatedDataAuthorizations().forEach(async (data_authoriza) => {
             const turtle = await new RdfFactory().create(data_authoriza); // Error handling
-            insertTurtleResource(this.authorizationAgent.session, data_authoriza.id, turtle);
+            insertTurtleResource(this.authorizationAgent.session.fetch, data_authoriza.id, turtle);
         });
 
         const access_authoriza = this.getCreatedAccessAuthorization();
         const turtle = await new RdfFactory().create(access_authoriza); // Error handling
-        insertTurtleResource(this.authorizationAgent.session, access_authoriza.id, turtle);
+        insertTurtleResource(this.authorizationAgent.session.fetch, access_authoriza.id, turtle);
 
         const AuthorizationRegistry_store = new Store();
         AuthorizationRegistry_store.addQuad(

@@ -2,11 +2,10 @@ import N3 from "n3";
 import { Session } from "@inrupt/solid-client-authn-node";
 import { randomUUID } from "crypto";
 import {
-    createContainer,
     readResource,
     updateContainerResource,
 } from "./utils/modify-pod";
-import { type_a, INTEROP } from "./namespace";
+import { INTEROP } from "./namespace";
 import {
     AgentRegistration,
     ApplicationAgent,
@@ -24,12 +23,12 @@ import { RdfDocument } from "./rdf-document";
 import { ApplicationRegistrationNotExist } from "./errors/application-registration-not-exist";
 import { SocialAgentProfileDocument } from "./profile-documents/social-agent-profile-document";
 import { DataRegistryResource } from "./data-registry-resource";
+import { RegistrySetResource, createRegistriesSet } from "./registry-set-resource";
 
 const { Store, DataFactory } = N3;
 const { namedNode } = DataFactory;
 
 export class AuthorizationAgent {
-    registries_container!: string;
     AgentRegistry_container!: string;
     AuthorizationRegistry_container!: string;
     DataRegistry_container!: string;
@@ -46,63 +45,19 @@ export class AuthorizationAgent {
             await SocialAgentProfileDocument.getProfileDocument(
                 this.social_agent.webID,
             );
-
+        
+        let registies_set: RegistrySetResource
         if (profile_document.hasRegistrySet()) {
-            const set = await profile_document.getRegistrySet(
+            registies_set = await profile_document.getRegistrySet(
                 this.session.fetch,
             );
-            this.AgentRegistry_container = set.gethasAgentRegistry()!;
-            this.AuthorizationRegistry_container =
-                set.gethasAuthorizationRegistry()!;
-            this.DataRegistry_container = set.gethasDataRegistry()!;
         } else {
-            this.registries_container = this.pod + "Registries/";
-            this.AgentRegistry_container =
-                this.registries_container + "agentregisties/";
-            this.AuthorizationRegistry_container =
-                this.registries_container + "accessregisties/";
-            this.DataRegistry_container = this.pod + "data/";
-            profile_document.addhasRegistrySet(this.registries_container, this.session.fetch);
-            this.createRegistriesSet();
+            registies_set = await createRegistriesSet(this.session.fetch, this.pod, profile_document);
         }
-    }
 
-    async createRegistriesSet() {
-        await createContainer(this.session.fetch, this.registries_container);
-        await createContainer(this.session.fetch, this.AgentRegistry_container);
-        await createContainer(
-            this.session.fetch,
-            this.AuthorizationRegistry_container,
-        );
-        await createContainer(this.session.fetch, this.DataRegistry_container);
-
-        const registries_store = new Store();
-        registries_store.addQuad(
-            namedNode(this.registries_container),
-            namedNode(type_a),
-            namedNode(INTEROP + "RegistrySet"),
-        );
-        registries_store.addQuad(
-            namedNode(this.registries_container),
-            namedNode(INTEROP + "hasAgentRegistry"),
-            namedNode(this.AgentRegistry_container),
-        );
-        registries_store.addQuad(
-            namedNode(this.registries_container),
-            namedNode(INTEROP + "hasAuthorizationRegistry"),
-            namedNode(this.AuthorizationRegistry_container),
-        );
-        registries_store.addQuad(
-            namedNode(this.registries_container),
-            namedNode(INTEROP + "hasDataRegistry"),
-            namedNode(this.DataRegistry_container),
-        );
-
-        await updateContainerResource(
-            this.session.fetch,
-            this.registries_container + ".meta",
-            registries_store,
-        );
+        this.AgentRegistry_container = registies_set.getHasAgentRegistry()!;
+        this.AuthorizationRegistry_container = registies_set.gethasAuthorizationRegistry()!;
+        this.DataRegistry_container = registies_set.gethasDataRegistry()!;
     }
 
     generateId(uri: string) {

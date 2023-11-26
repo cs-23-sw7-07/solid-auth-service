@@ -40,19 +40,18 @@ export class AuthorizationBuilder {
     async createDataAuthorization(dataAccessScope: DataAccessScope) {
         const shapeTree = dataAccessScope.accessNeed.getRegisteredShapeTree();
         if (!shapeTree)
-            throw new Error(`The access need ${dataAccessScope.accessNeed.uri} has no registrated RegisteredShapeTree.`)
+            throw new Error(
+                `The access need ${dataAccessScope.accessNeed.uri} has no registrated RegisteredShapeTree.`,
+            );
 
         const dataRegs: DataRegistration[] =
             await this.authorizationAgent.getAllDataRegistrations();
-        const exists = dataRegs.some(
-            (dataReg) => dataReg.registeredShapeTree === shapeTree,
-        );
+        const exists = dataRegs.some((dataReg) => dataReg.registeredShapeTree === shapeTree);
 
         if (!exists) {
             const dataReg = new DataRegistration(
-                this.authorizationAgent.generateId(
-                    this.authorizationAgent.DataRegistry_container,
-                ) + "/",
+                this.authorizationAgent.generateId(this.authorizationAgent.DataRegistry_container) +
+                    "/",
                 this.authorizationAgent.social_agent,
                 this.authorizationAgent.authorization_agent,
                 new Date(),
@@ -64,12 +63,9 @@ export class AuthorizationBuilder {
             await createContainer(fetch, dataReg.id);
             const container_iri = dataReg.id + ".meta";
 
-            const dataset: string = (await new RdfFactory().create(
-                dataReg,
-            )) as string;
+            const dataset: string = (await new RdfFactory().create(dataReg)) as string;
 
-            const serializedDataset = (await parseTurtle(dataset, dataReg.id))
-                .dataset;
+            const serializedDataset = (await parseTurtle(dataset, dataReg.id)).dataset;
 
             await updateContainerResource(
                 this.authorizationAgent.session.fetch,
@@ -77,16 +73,17 @@ export class AuthorizationBuilder {
                 serializedDataset,
             );
 
-            const dataRegistry = await DataRegistryResource.getResource(this.authorizationAgent.DataRegistry_container)
-            await dataRegistry.addHasDataRegistration(this.authorizationAgent.session.fetch, dataReg)
+            const dataRegistry = await DataRegistryResource.getResource(
+                this.authorizationAgent.DataRegistry_container,
+            );
+            await dataRegistry.addHasDataRegistration(
+                this.authorizationAgent.session.fetch,
+                dataReg,
+            );
         }
 
-        const data_authorization =
-            await dataAccessScope.toDataAuthoization(this);
-        this.data_authorizations.set(
-            dataAccessScope.accessNeed.uri,
-            data_authorization,
-        );
+        const data_authorization = await dataAccessScope.toDataAuthoization(this);
+        this.data_authorizations.set(dataAccessScope.accessNeed.uri, data_authorization);
     }
 
     getCreatedDataAuthorizations(): DataAuthorization[] {
@@ -95,27 +92,19 @@ export class AuthorizationBuilder {
 
     getCreatedAccessAuthorization(): AccessAuthorization {
         if (!this.access_authorizations)
-            throw new Error("The access authorization has not been generated.")
+            throw new Error("The access authorization has not been generated.");
         return this.access_authorizations;
     }
 
     async storeToPod() {
         this.getCreatedDataAuthorizations().forEach(async (data_authoriza) => {
             const turtle = await new RdfFactory().create(data_authoriza); // Error handling
-            insertTurtleResource(
-                this.authorizationAgent.session,
-                data_authoriza.id,
-                turtle,
-            );
+            insertTurtleResource(this.authorizationAgent.session, data_authoriza.id, turtle);
         });
 
         const access_authoriza = this.getCreatedAccessAuthorization();
         const turtle = await new RdfFactory().create(access_authoriza); // Error handling
-        insertTurtleResource(
-            this.authorizationAgent.session,
-            access_authoriza.id,
-            turtle,
-        );
+        insertTurtleResource(this.authorizationAgent.session, access_authoriza.id, turtle);
 
         const AuthorizationRegistry_store = new Store();
         AuthorizationRegistry_store.addQuad(
@@ -131,12 +120,11 @@ export class AuthorizationBuilder {
     }
 
     async createAccessAuthorization(access_need_group: AccessNeedGroup) {
-        this.access_authorizations =
-            await access_need_group.toAccessAuthorization(
-                this.generateId(),
-                this.authorizationAgent,
-                this.grantee,
-                this.getCreatedDataAuthorizations(),
-            );
+        this.access_authorizations = await access_need_group.toAccessAuthorization(
+            this.generateId(),
+            this.authorizationAgent,
+            this.grantee,
+            this.getCreatedDataAuthorizations(),
+        );
     }
 }

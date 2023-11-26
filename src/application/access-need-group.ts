@@ -1,9 +1,4 @@
-import {
-    AccessAuthorization,
-    Agent,
-    DataAuthorization,
-    Fetch,
-} from "solid-interoperability";
+import { AccessAuthorization, Agent, DataAuthorization, Fetch } from "solid-interoperability";
 import { RdfDocument } from "../rdf-document";
 import { INTEROP } from "../namespace";
 import { AccessNeed } from "./access-need";
@@ -17,10 +12,7 @@ export class AccessNeedGroup extends RdfDocument {
         super(uri, dataset, prefixes);
     }
 
-    static async getRdfDocument(
-        uri: string,
-        fetch: Fetch,
-    ): Promise<AccessNeedGroup> {
+    static async getRdfDocument(uri: string, fetch: Fetch): Promise<AccessNeedGroup> {
         return fetch(uri)
             .then((res) => {
                 return res.text();
@@ -43,9 +35,7 @@ export class AccessNeedGroup extends RdfDocument {
     }
 
     gethasAccessDescriptionSet(): string[] | undefined {
-        return this.getObjectValuesFromPredicate(
-            INTEROP + "hasAccessDescriptionSet",
-        );
+        return this.getObjectValuesFromPredicate(INTEROP + "hasAccessDescriptionSet");
     }
 
     getAccessNecessity(): string | undefined {
@@ -61,17 +51,14 @@ export class AccessNeedGroup extends RdfDocument {
     }
 
     async getHasAccessNeed(fetch: Fetch): Promise<AccessNeed[]> {
-        const need_uris = this.getObjectValuesFromPredicate(
-            INTEROP + "hasAccessNeed",
-        )
-        if (!need_uris)
-            return [];
+        const need_uris = this.getObjectValuesFromPredicate(INTEROP + "hasAccessNeed");
+        if (!need_uris) return [];
 
         let needs: AccessNeed[] = [];
         for (const uri of need_uris) {
             needs.push(await AccessNeed.getRdfDocument(uri, fetch));
         }
-        
+
         return needs;
     }
 

@@ -6,12 +6,7 @@ const trimNamedGraph = (dataset: DatasetCore): DatasetCore => {
 
     for (const q of dataset) {
         newDataset.add(
-            DataFactory.quad(
-                q.subject,
-                q.predicate,
-                q.object,
-                DataFactory.defaultGraph(),
-            ),
+            DataFactory.quad(q.subject, q.predicate, q.object, DataFactory.defaultGraph()),
         );
     }
 

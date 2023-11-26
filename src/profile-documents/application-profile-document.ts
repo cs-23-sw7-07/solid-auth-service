@@ -11,10 +11,7 @@ export class ApplicationProfileDocument extends RdfDocument {
         super(webId, dataset, prefixes);
     }
 
-    static async getRdfDocument(
-        uri: string,
-        fetch: Fetch,
-    ): Promise<ApplicationProfileDocument> {
+    static async getRdfDocument(uri: string, fetch: Fetch): Promise<ApplicationProfileDocument> {
         return fetch(uri)
             .then((res) => res.text())
             .then((res) => parseTurtle(res, uri))
@@ -33,9 +30,7 @@ export class ApplicationProfileDocument extends RdfDocument {
     }
 
     getApplicationDescription(): string | undefined {
-        return this.getObjectValueFromPredicate(
-            INTEROP + "applicationDescription",
-        );
+        return this.getObjectValueFromPredicate(INTEROP + "applicationDescription");
     }
 
     getApplicationAuthor(): string | undefined {
@@ -43,18 +38,13 @@ export class ApplicationProfileDocument extends RdfDocument {
     }
 
     getApplicationThumbnail(): string | undefined {
-        return this.getObjectValueFromPredicate(
-            INTEROP + "applicationThumbnail",
-        );
+        return this.getObjectValueFromPredicate(INTEROP + "applicationThumbnail");
     }
 
     async gethasAccessNeedGroup(fetch: Fetch): Promise<AccessNeedGroup[]> {
-        const values = this.getObjectValuesFromPredicate(
-            INTEROP + "hasAccessNeedGroup",
-        );
+        const values = this.getObjectValuesFromPredicate(INTEROP + "hasAccessNeedGroup");
 
-        if (!values)
-            return [];
+        if (!values) return [];
 
         let groups = [];
         for (const uri of values) {
@@ -64,9 +54,7 @@ export class ApplicationProfileDocument extends RdfDocument {
         return groups;
     }
 
-    getHasAuthorizationCallbackEndpoint(): string| undefined {
-        return this.getObjectValueFromPredicate(
-            INTEROP + "hasAuthorizationCallbackEndpoint",
-        );
+    getHasAuthorizationCallbackEndpoint(): string | undefined {
+        return this.getObjectValueFromPredicate(INTEROP + "hasAuthorizationCallbackEndpoint");
     }
 }

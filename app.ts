@@ -64,7 +64,7 @@ if (useHttps) {
     });
 } else {
     app.listen(port, hostname, () => {
-        console.log(`Server running at http://${address}:${port}/agents/new`);
+        console.log(`Server running at http://${address}:${port}`);
     });
 }
 
@@ -96,7 +96,6 @@ authorization_router.get("/new", async (req, res) => {
         clientName: "Authorization Agent",
         handleRedirect: redirectToSolidIdentityProvider,
     });
-    // return turtle document with the redirecct endpoints
 })
 
 /**
@@ -117,7 +116,7 @@ async function getAuthorizationAgentsFromCache() {
             const pods = await getPodUrlAll(webId, { fetch: session.fetch });
 
             cache.set(webId, new AuthorizationAgent(new SocialAgent(webId), new ApplicationAgent(agent_URI), pods[0], session));
-            cache.get(webId)!.setRegistriesSetContainer();
+            await cache.get(webId)!.setRegistriesSetContainer();
         }
     } catch (error) {
         console.error("Error in getAuthorizationAgentsFromCache:", error);
@@ -173,12 +172,12 @@ authorization_router.get("/new/callback", async (req, res) => {
             const profile_document: SocialAgentProfileDocument = await SocialAgentProfileDocument.getProfileDocument(webId);
 
             if (!profile_document.hasAuthorizationAgent(agent_URI))
-                profile_document.addhasAuthorizationAgent(agent_URI, session.fetch);
+                await profile_document.addhasAuthorizationAgent(agent_URI, session.fetch);
 
             const pods = await getPodUrlAll(webId, { fetch: session!.fetch });
             authAgent = new AuthorizationAgent(new SocialAgent(webId), new ApplicationAgent(agent_URI), pods[0], session);
             cache.set(webId, authAgent);
-            authAgent.setRegistriesSetContainer();
+            await authAgent.setRegistriesSetContainer();
         } else
             authAgent.session = session;
 
@@ -205,14 +204,31 @@ authorization_router.head("/:webId", async (req, res) => {
     }
 })
 
+/**
+ * Redirect request for wanting access to a Pod
+ */
+authorization_router.get("/:webId/redirect", async (req, res) => {
+    if (typeof(req.query.client_id) != "string") {
+        res.status(400).send('Bad Request: Missing "client_id" parameter');
+    }
+
+    const clientId: string = req.query.client_id as string;
+    res.redirect(`/${req.params.webId}/wants-access?client_id=` + clientId)
+});
+
 /*
 The endpoint for the Application wanting access to a Pod
 */
-authorization_router.post("/:webId/wants-access", async (req, res, next) => {
+authorization_router.post("/:webId/wants-access", async (req, res) => {
+    if (typeof(req.query.client_id) != "string") {
+        res.status(400).send('Bad Request: Missing "client_id" parameter');
+    }
+
+    const clientId: string = req.query.client_id as string;
+
     try {
         const authorizationAgent: AuthorizationAgent = cache.get(authorizationAgentUrl2webId(req.params.webId))!;
         const accessApprovalHandler = new AccessApprovalHandler();
-        const clientId: string = req.query.client_id as string;
         const approved: boolean = accessApprovalHandler.requestAccessApproval();
         const fetch = authorizationAgent.session.fetch;
 
@@ -239,15 +255,6 @@ authorization_router.post("/:webId/wants-access", async (req, res, next) => {
     }
 });
 
-/**
- * Redirect request for wanting access to a Pod
- */
-authorization_router.get("/:webId/redirect", async (req, res) => {
-    res.redirect(`/${req.params.webId}/wants-access`)
-});
-
-
-
 const pods_router = express.Router()
 app.use('/pods', pods_router);
 /*
@@ -270,7 +277,7 @@ pods_router.put("/:dataId/:webId", async (req, res) => {
 
         if (linkValue.refs.length === 1) {
             const dataInstanceIRI: string = linkValue.refs[0].uri + '/' + dataId;
-            await insertTurtleResource(authorizationAgent.session, dataInstanceIRI, req.body);
+            await insertTurtleResource(authorizationAgent.session.fetch, dataInstanceIRI, req.body);
             res.status(200).json({ success: true });
         } else {
             res.status(400).json({ error: "Only one Link header is allowed." });
@@ -292,7 +299,7 @@ pods_router.get("/:dataIRI/:webId", async (req, res) => {
         if (!authorizationAgent)
             throw new Error("Invalid or expired authorization agent.");
 
-        const data = await readResource(authorizationAgent.session, dataIRI);
+        const data = await readResource(authorizationAgent.session.fetch, dataIRI);
         res.status(200).send(data);
     } catch (error) {
         console.error("Error retrieving data from the Pod:", error);

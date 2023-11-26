@@ -21,16 +21,11 @@ export class RdfDocument {
         return fetch(uri)
             .then((res) => res.text())
             .then((res) => parseTurtle(res, uri))
-            .then(
-                (result) =>
-                    new RdfDocument(uri, result.dataset, result.prefixes),
-            );
+            .then((result) => new RdfDocument(uri, result.dataset, result.prefixes));
     }
 
     getTypeOfSubject(): string | undefined {
-        return this.getObjectValueFromPredicate(
-            "http://www.w3.org/1999/02/22-rdf-syntax-ns#type",
-        );
+        return this.getObjectValueFromPredicate("http://www.w3.org/1999/02/22-rdf-syntax-ns#type");
     }
 
     getObjectValueFromPredicate(predicate: string): string | undefined {
@@ -42,10 +37,7 @@ export class RdfDocument {
     }
 
     getObjectValuesFromPredicate(predicate: string): string[] | undefined {
-        const quads = this.dataset.match(
-            namedNode(this.uri),
-            namedNode(predicate),
-        );
+        const quads = this.dataset.match(namedNode(this.uri), namedNode(predicate));
         let values: string[] = [];
         for (const quad of quads) {
             values.push(quad.object.value);

@@ -10,10 +10,7 @@ export class AccessNeed extends RdfDocument {
         super(uri, dataset, prefixes);
     }
 
-    static async getRdfDocument(
-        uri: string,
-        fetch: Fetch,
-    ): Promise<AccessNeed> {
+    static async getRdfDocument(uri: string, fetch: Fetch): Promise<AccessNeed> {
         return fetch(uri)
             .then((res) => {
                 return res.text();
@@ -33,9 +30,7 @@ export class AccessNeed extends RdfDocument {
     }
 
     getRegisteredShapeTree(): string | undefined {
-        return this.getObjectValueFromPredicate(
-            INTEROP + "registeredShapeTree",
-        );
+        return this.getObjectValueFromPredicate(INTEROP + "registeredShapeTree");
     }
 
     getAccessModes(): AccessMode[] {
@@ -67,8 +62,9 @@ export class AccessNeed extends RdfDocument {
     }
 
     async getInheritsFromNeed(fetch: Fetch): Promise<AccessNeed | undefined> {
-        const inherit_uri: string | undefined =
-            this.getObjectValueFromPredicate(INTEROP + "inheritsFromNeed");
+        const inherit_uri: string | undefined = this.getObjectValueFromPredicate(
+            INTEROP + "inheritsFromNeed",
+        );
 
         if (inherit_uri) {
             return await AccessNeed.getRdfDocument(inherit_uri, fetch);

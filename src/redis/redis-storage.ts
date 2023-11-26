@@ -1,11 +1,10 @@
 import type { IStorage } from "@inrupt/solid-client-authn-node";
 import { Redis } from "ioredis";
-import { RedisConnectionInfo } from "./redis-connection-info";
 
 export class RedisSolidStorage implements IStorage {
     private client;
 
-    public constructor(info?: RedisConnectionInfo) {
+    public constructor() {
         this.client = Redis.createClient();
         console.log("Redis client created");
     }
@@ -14,8 +13,6 @@ export class RedisSolidStorage implements IStorage {
         try {
             const result = await this.client.del(key).then();
             if (result > 0) return;
-
-            // ??
         } catch (e) {}
     }
 

@@ -1,29 +1,20 @@
-import { Session } from "@inrupt/solid-client-authn-node";
 import { DatasetCore } from "@rdfjs/types";
 import { serializeTurtle } from "./turtle-serializer";
 import { Fetch } from "solid-interoperability";
 
-export async function insertTurtleResource(
-    session: Session,
-    uri: string,
-    document_rdf: string,
-) {
-    await session
-        .fetch(uri, {
-            method: "PUT",
-            body: document_rdf,
-            headers: {
-                link: '<http://www.w3.org/ns/ldp#Resource>; rel="type"',
-                "Content-Type": "text/turtle",
-            },
-        })
-        .then((res) => {
-            if (!res.ok) {
-                return new InsertResourceError(
-                    `Couldn't insert resource at ${uri}`,
-                );
-            }
-        });
+export async function insertTurtleResource(fetch: Fetch, uri: string, document_rdf: string) {
+    await fetch(uri, {
+        method: "PUT",
+        body: document_rdf,
+        headers: {
+            link: '<http://www.w3.org/ns/ldp#Resource>; rel="type"',
+            "Content-Type": "text/turtle",
+        },
+    }).then((res) => {
+        if (!res.ok) {
+            return new InsertResourceError(`Couldn't insert resource at ${uri}`);
+        }
+    });
 }
 
 export async function createContainer(fetch: Fetch, uri_container: string) {
@@ -38,9 +29,7 @@ export async function createContainer(fetch: Fetch, uri_container: string) {
 
     const response = await fetch(uri_container, requestOptions);
     if (!response.ok) {
-        throw new Error(
-            `failed to create containers ${uri_container} ${response}`,
-        );
+        throw new Error(`failed to create containers ${uri_container} ${response}`);
     }
 }
 
@@ -71,27 +60,21 @@ export async function updateContainerResource(
     container_iri: string,
     dataset: DatasetCore,
 ) {
-    const body = await insertPatch(dataset)
+    const body = await insertPatch(dataset);
     await fetch(container_iri, {
         method: "PATCH",
         body: body,
         headers: {
             "Content-Type": "application/sparql-update",
         },
-    }).then(res => {
+    }).then((res) => {
         if (!res.ok) {
-            const a = res.body
-            const b = res.headers
-            const c = res.statusText
             throw new Error(`failed to patch ${container_iri}`);
         }
     });
 }
 
-export async function deleteContainerResource(
-    fetch: Fetch,
-    containerIRI: string,
-): Promise<void> {
+export async function deleteContainerResource(fetch: Fetch, containerIRI: string): Promise<void> {
     const { ok } = await fetch(containerIRI, {
         method: "DELETE",
     });
@@ -101,8 +84,8 @@ export async function deleteContainerResource(
     }
 }
 
-export function readResource(session: Session, url: string): Promise<string> {
-    return session.fetch(url).then((res) => {
+export function readResource(fetch: Fetch, url: string): Promise<string> {
+    return fetch(url).then((res) => {
         if (res.ok) return res.text();
         throw new ReadResourceError("Couldn't read the resource at " + url);
     });

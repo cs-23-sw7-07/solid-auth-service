@@ -20,9 +20,7 @@ export class RegistrySetResource extends RdfDocument {
     }
 
     gethasAuthorizationRegistry(): string | undefined {
-        return this.getObjectValueFromPredicate(
-            INTEROP + "hasAuthorizationRegistry",
-        );
+        return this.getObjectValueFromPredicate(INTEROP + "hasAuthorizationRegistry");
     }
 
     gethasDataRegistry(): string | undefined {
@@ -30,20 +28,19 @@ export class RegistrySetResource extends RdfDocument {
     }
 }
 
-export async function createRegistriesSet(fetch: Fetch, pod: string, profile_document: SocialAgentProfileDocument) {
+export async function createRegistriesSet(
+    fetch: Fetch,
+    pod: string,
+    profile_document: SocialAgentProfileDocument,
+) {
     const registries_container = pod + "Registries/";
-    const AgentRegistry_container =
-            registries_container + "agentregisties/";
-    const AuthorizationRegistry_container =
-            registries_container + "accessregisties/";
+    const AgentRegistry_container = registries_container + "agentregisties/";
+    const AuthorizationRegistry_container = registries_container + "accessregisties/";
     const DataRegistry_container = pod + "data/";
-    
+
     await createContainer(fetch, registries_container);
     await createContainer(fetch, AgentRegistry_container);
-    await createContainer(
-        fetch,
-        AuthorizationRegistry_container,
-    );
+    await createContainer(fetch, AuthorizationRegistry_container);
     await createContainer(fetch, DataRegistry_container);
 
     const registries_store = new Store();
@@ -68,11 +65,9 @@ export async function createRegistriesSet(fetch: Fetch, pod: string, profile_doc
         namedNode(DataRegistry_container),
     );
 
-    await updateContainerResource(
-        fetch,
-        registries_container + ".meta",
-        registries_store,
-    ).then(_ => profile_document.addhasRegistrySet(registries_container, fetch));
+    await updateContainerResource(fetch, registries_container + ".meta", registries_store).then(
+        (_) => profile_document.addhasRegistrySet(registries_container, fetch),
+    );
 
-    return new RegistrySetResource(registries_container, registries_store, {})
+    return new RegistrySetResource(registries_container, registries_store, {});
 }

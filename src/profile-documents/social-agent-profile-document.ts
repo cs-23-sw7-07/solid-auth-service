@@ -16,20 +16,11 @@ export class SocialAgentProfileDocument extends RdfDocument {
         super(webId, dataset, prefixes);
     }
 
-    static async getProfileDocument(
-        uri: string,
-    ): Promise<SocialAgentProfileDocument> {
+    static async getProfileDocument(uri: string): Promise<SocialAgentProfileDocument> {
         return fetch(uri)
             .then((res) => res.text())
             .then((res) => parseTurtle(res, uri))
-            .then(
-                (result) =>
-                    new SocialAgentProfileDocument(
-                        uri,
-                        result.dataset,
-                        result.prefixes,
-                    ),
-            );
+            .then((result) => new SocialAgentProfileDocument(uri, result.dataset, result.prefixes));
     }
 
     hasAuthorizationAgent(authorization_uri: string): boolean {
@@ -37,8 +28,7 @@ export class SocialAgentProfileDocument extends RdfDocument {
             INTEROP + "hasAuthorizationAgent",
         );
         return (
-            authorization_agents != undefined &&
-            authorization_agents.includes(authorization_uri)
+            authorization_agents != undefined && authorization_agents.includes(authorization_uri)
         );
     }
 
@@ -51,20 +41,16 @@ export class SocialAgentProfileDocument extends RdfDocument {
                 defaultGraph(),
             ),
         );
-        await this.updateProfile(fetch)
+        await this.updateProfile(fetch);
     }
 
     hasRegistrySet(): boolean {
-        const sets = this.getObjectValuesFromPredicate(
-            INTEROP + "hasRegistrySet",
-        );
+        const sets = this.getObjectValuesFromPredicate(INTEROP + "hasRegistrySet");
         return sets != undefined;
     }
 
     getRegistrySet(fetch: Fetch): Promise<RegistrySetResource> {
-        const set = this.getObjectValueFromPredicate(
-            INTEROP + "hasRegistrySet",
-        )!;
+        const set = this.getObjectValueFromPredicate(INTEROP + "hasRegistrySet")!;
         return fetch(set)
             .then((res) => res.text())
             .then((res) => parseTurtle(res, set))
@@ -80,7 +66,7 @@ export class SocialAgentProfileDocument extends RdfDocument {
                 defaultGraph(),
             ),
         );
-        await this.updateProfile(fetch)
+        await this.updateProfile(fetch);
     }
 
     private async updateProfile(fetch: Fetch) {
@@ -96,10 +82,7 @@ export class SocialAgentProfileDocument extends RdfDocument {
     }
 
     getSubjectWebId() {
-        for (const quad of this.dataset.match(
-            null,
-            namedNode(oidcIssuer_PREDICATE),
-        )) {
+        for (const quad of this.dataset.match(null, namedNode(oidcIssuer_PREDICATE))) {
             return quad.subject;
         }
         throw new Error("No subject with a oidcIssuer");

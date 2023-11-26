@@ -19,10 +19,7 @@ export class ParserResult {
  * @param text turtle text to parse.
  * @param source the IRI of the resource to parse.
  */
-export const parseTurtle = async (
-    text: string,
-    source = "",
-): Promise<ParserResult> => {
+export const parseTurtle = async (text: string, source = ""): Promise<ParserResult> => {
     const store = new Store();
     return new Promise((resolve, reject) => {
         const parserOptions: { baseIRI?: string } = {};
@@ -34,9 +31,7 @@ export const parseTurtle = async (
             if (error) {
                 reject(error);
             } else if (quad) {
-                store.add(
-                    DataFactory.quad(quad.subject, quad.predicate, quad.object),
-                );
+                store.add(DataFactory.quad(quad.subject, quad.predicate, quad.object));
             } else {
                 resolve(new ParserResult(store, parse));
             }

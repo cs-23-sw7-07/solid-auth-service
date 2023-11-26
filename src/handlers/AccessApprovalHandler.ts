@@ -16,10 +16,7 @@ export class AccessApprovalHandler implements IAccessApproval {
     setGrantingStatus(value: boolean) {
         this.isAccessGranted = value;
     }
-    getApprovalStatus(
-        agent: Agent,
-        access: Map<AccessNeedGroup, DataAccessScope[]>,
-    ): Approval {
+    getApprovalStatus(agent: Agent, access: Map<AccessNeedGroup, DataAccessScope[]>): Approval {
         if (this.isAccessGranted) return new Approval(agent, access);
         else throw Error("Undefined approval status.");
     }

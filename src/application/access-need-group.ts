@@ -52,8 +52,8 @@ export class AccessNeedGroup extends RDFResource {
     ): AccessAuthorization {
         return new AccessAuthorization(
             id,
-            authorization_agent.social_agent,
-            authorization_agent.authorization_agent,
+            authorization_agent.socialAgent,
+            authorization_agent.authorizationAgent,
             new Date(),
             grantee,
             this.uri,

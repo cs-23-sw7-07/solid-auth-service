@@ -16,7 +16,7 @@ export class DataAccessScopeAll extends DataAccessScope {
     async toDataAuthorization(builder: AuthorizationBuilder): Promise<DataAuthorization> {
         return new DataAuthorization(
             builder.generateId(),
-            builder.authorizationAgent.social_agent,
+            builder.authorizationAgent.socialAgent,
             this.accessNeed.getRegisteredShapeTree()!,
             this.accessNeed.getAccessModes(),
             GrantScope.All,

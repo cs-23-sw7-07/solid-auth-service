@@ -23,11 +23,11 @@ import { ApplicationProfileDocument } from "./profile-documents/application-prof
 import { webId2AuthorizationAgentUrl } from "./utils/uri-convert";
 
 export class AuthorizationAgent {
-    AgentRegistry_container!: string;
+    agentRegistryContainer!: string;
     AuthorizationRegistry_container!: string;
     DataRegistry_container!: string;
-    social_agent: SocialAgent;
-    authorization_agent: ApplicationAgent;
+    socialAgent: SocialAgent;
+    authorizationAgent: ApplicationAgent;
 
     constructor(
         public pod: string,
@@ -35,15 +35,15 @@ export class AuthorizationAgent {
     ) {
         const webId = session.info.webId!;
         const agent_URI = webId2AuthorizationAgentUrl(webId);
-        this.authorization_agent = new ApplicationAgent(agent_URI);
-        this.social_agent = new SocialAgent(webId);
+        this.authorizationAgent = new ApplicationAgent(agent_URI);
+        this.socialAgent = new SocialAgent(webId);
     }
 
     async setRegistriesSetContainer() {
         const profile_document: SocialAgentProfileDocument = await getResource(
             SocialAgentProfileDocument,
             this.session.fetch,
-            this.social_agent.webID,
+            this.socialAgent.webID,
         );
 
         let registies_set: RegistrySetResource;
@@ -57,7 +57,7 @@ export class AuthorizationAgent {
             );
         }
 
-        this.AgentRegistry_container = registies_set.HasAgentRegistry!;
+        this.agentRegistryContainer = registies_set.HasAgentRegistry!;
         this.AuthorizationRegistry_container = registies_set.HasAuthorizationRegistry!;
         this.DataRegistry_container = registies_set.HasDataRegistry!;
     }
@@ -88,7 +88,7 @@ export class AuthorizationAgent {
         const agent_registry = await getResource(
             AgentRegistryResource,
             this.session.fetch,
-            this.AgentRegistry_container,
+            this.agentRegistryContainer,
         );
         await agent_registry.addRegistration(
             this.session.fetch,
@@ -101,7 +101,7 @@ export class AuthorizationAgent {
         const agentRegistrySet = await getResource(
             AgentRegistryResource,
             this.session.fetch,
-            this.AgentRegistry_container,
+            this.agentRegistryContainer,
         );
         const profile_document: ApplicationProfileDocument = await getResource(
             ApplicationProfileDocument,

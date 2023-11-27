@@ -19,32 +19,32 @@ import { Session } from "@inrupt/solid-client-authn-node";
 import { parseTurtle } from "../utils/turtle-parser";
 
 export class AgentRegistrationBuilder {
-    private data_grants: DataGrant[] = [];
-    private access_grants: AccessGrant[] = [];
+    private dataGrants: DataGrant[] = [];
+    private accessGrants: AccessGrant[] = [];
     private registration: AgentRegistration | undefined = undefined;
 
-    constructor(private authorization_agent: AuthorizationAgent) {}
+    constructor(private authorizationAgent: AuthorizationAgent) {}
 
-    async build(registeredAgent: Agent, authorization_builder: AuthorizationBuilder[]) {
-        const id = this.authorization_agent.AgentRegistry_container + randomUUID() + "/";
+    async build(registeredAgent: Agent, authorizationBuilder: AuthorizationBuilder[]) {
+        const id = this.authorizationAgent.agentRegistryContainer + randomUUID() + "/";
 
         let builders: GrantNeedGroupBuilder[] = [];
-        for (const builder of authorization_builder) {
-            const grant_builder = new GrantNeedGroupBuilder(this.authorization_agent, id);
-            await grant_builder.createDataGrants(builder.getCreatedDataAuthorizations());
-            await grant_builder.createAccessGrant(builder.getCreatedAccessAuthorization());
+        for (const builder of authorizationBuilder) {
+            const grantBuilder = new GrantNeedGroupBuilder(this.authorizationAgent, id);
+            await grantBuilder.createDataGrants(builder.getCreatedDataAuthorizations());
+            await grantBuilder.createAccessGrant(builder.getCreatedAccessAuthorization());
 
-            for (const grant of grant_builder.getDataGrants()) {
-                this.data_grants.push(grant);
+            for (const grant of grantBuilder.getDataGrants()) {
+                this.dataGrants.push(grant);
             }
-            this.access_grants.push(grant_builder.getAccessGrant());
-            builders.push(grant_builder);
+            this.accessGrants.push(grantBuilder.getAccessGrant());
+            builders.push(grantBuilder);
         }
 
         this.registration = new ApplicationRegistration(
             id,
-            this.authorization_agent.social_agent,
-            this.authorization_agent.authorization_agent,
+            this.authorizationAgent.socialAgent,
+            this.authorizationAgent.authorizationAgent,
             new Date(),
             new Date(),
             registeredAgent,
@@ -56,22 +56,22 @@ export class AgentRegistrationBuilder {
         if (!this.registration)
             throw new Error("Not able to store in pod, because AgentRegistration is not created");
 
-        const session: Session = this.authorization_agent.session;
+        const session: Session = this.authorizationAgent.session;
         const factory: RdfFactory = new RdfFactory();
-        for (const grant of this.data_grants) {
+        for (const grant of this.dataGrants) {
             await insertTurtleResource(session.fetch, grant.id, await factory.create(grant));
         }
 
-        for (const grant of this.access_grants) {
+        for (const grant of this.accessGrants) {
             await insertTurtleResource(session.fetch, grant.id, await factory.create(grant));
         }
 
-        const registration_turtle = await factory.create(this.registration);
+        const registrationTurtle = await factory.create(this.registration);
 
         await updateContainerResource(
             session.fetch,
             this.registration.id,
-            (await parseTurtle(registration_turtle, this.registration.id)).dataset,
+            (await parseTurtle(registrationTurtle, this.registration.id)).dataset,
         );
     }
 
@@ -84,14 +84,14 @@ export class AgentRegistrationBuilder {
 }
 
 export class GrantNeedGroupBuilder implements IDataGrantBuilder {
-    private data_grants: Map<DataAuthorization, DataGrant[]> = new Map<
+    private dataGrants: Map<DataAuthorization, DataGrant[]> = new Map<
         DataAuthorization,
         DataGrant[]
     >();
-    private access_grant: AccessGrant | undefined = undefined;
+    private accessGrant: AccessGrant | undefined = undefined;
 
     constructor(
-        private authorization_agent: AuthorizationAgent,
+        private authorizationAgent: AuthorizationAgent,
         private container: string,
     ) {}
 
@@ -99,39 +99,39 @@ export class GrantNeedGroupBuilder implements IDataGrantBuilder {
         registeredShapeTree: string,
         dataOwner?: SocialAgent | undefined,
     ): Promise<DataRegistration[]> {
-        return this.authorization_agent.getDataRegistrations(registeredShapeTree, dataOwner);
+        return this.authorizationAgent.getDataRegistrations(registeredShapeTree, dataOwner);
     }
     getInheritedDataGrants(auth: DataAuthorization): Promise<DataGrant[]> {
-        if (!this.data_grants.get(auth))
+        if (!this.dataGrants.get(auth))
             throw new Error(
                 "The corresponding data grants of the inherited data authorization have not been build.",
             );
-        return Promise.resolve(this.data_grants.get(auth)!);
+        return Promise.resolve(this.dataGrants.get(auth)!);
     }
 
     generateId(): string {
-        return this.authorization_agent.generateId(this.container);
+        return this.authorizationAgent.generateId(this.container);
     }
 
-    async createDataGrants(data_authorizations: DataAuthorization[]) {
-        for (const auth of data_authorizations) {
-            this.data_grants.set(auth, await auth.toDataGrant(this));
+    async createDataGrants(dataAuthorizations: DataAuthorization[]) {
+        for (const auth of dataAuthorizations) {
+            this.dataGrants.set(auth, await auth.toDataGrant(this));
         }
     }
 
     getDataGrants(): DataGrant[] {
-        return Array.from(this.data_grants.values()).flat();
+        return Array.from(this.dataGrants.values()).flat();
     }
 
-    createAccessGrant(access_authorization: AccessAuthorization) {
-        this.access_grant = access_authorization.toAccessGrant(
+    createAccessGrant(accessAuthorization: AccessAuthorization) {
+        this.accessGrant = accessAuthorization.toAccessGrant(
             this.generateId(),
             this.getDataGrants(),
         );
     }
 
     getAccessGrant(): AccessGrant {
-        if (!this.access_grant) throw new Error("The access grant has not been generated.");
-        return this.access_grant;
+        if (!this.accessGrant) throw new Error("The access grant has not been generated.");
+        return this.accessGrant;
     }
 }

@@ -52,8 +52,8 @@ export class AuthorizationBuilder {
             const dataReg = new DataRegistration(
                 this.authorizationAgent.generateId(this.authorizationAgent.DataRegistry_container) +
                     "/",
-                this.authorizationAgent.social_agent,
-                this.authorizationAgent.authorization_agent,
+                this.authorizationAgent.socialAgent,
+                this.authorizationAgent.authorizationAgent,
                 new Date(),
                 new Date(),
                 shapeTree,

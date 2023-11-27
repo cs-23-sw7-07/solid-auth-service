@@ -22,7 +22,7 @@ export class SocialAgentProfileDocument extends RDFResource {
         );
     }
 
-    async addhasAuthorizationAgent(agentUri: string, fetch: Fetch) {
+    async addHasAuthorizationAgent(agentUri: string, fetch: Fetch) {
         this.dataset.add(
             quad(
                 this.SubjectWebId,
@@ -47,7 +47,7 @@ export class SocialAgentProfileDocument extends RDFResource {
             .then((parsed) => new RegistrySetResource(set, parsed.dataset));
     }
 
-    async addhasRegistrySet(registriesContainer: string, fetch: Fetch) {
+    async addHasRegistrySet(registriesContainer: string, fetch: Fetch) {
         this.dataset.add(
             quad(
                 this.SubjectWebId,

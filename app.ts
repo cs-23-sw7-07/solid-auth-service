@@ -174,7 +174,7 @@ authorizationRouter.get("/new/callback", async (req, res) => {
             const profileDocument: SocialAgentProfileDocument = await getResource(SocialAgentProfileDocument, session.fetch, webId);
 
             if (!profileDocument.hasAuthorizationAgent(agentURI))
-                await profileDocument.addhasAuthorizationAgent(agentURI, session.fetch);
+                await profileDocument.addHasAuthorizationAgent(agentURI, session.fetch);
 
             authAgent = await AuthorizationAgent.new(session);
             cache.set(webId, authAgent);

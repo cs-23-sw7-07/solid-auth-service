@@ -6,7 +6,6 @@ import {
     ApplicationAgent,
     ApplicationRegistration,
     DataRegistration,
-    Fetch,
     NotImplementedYet,
     RdfFactory,
     SocialAgent,
@@ -15,7 +14,6 @@ import { Approval } from "./application/approval";
 import { AuthorizationBuilder } from "./builder/authorization-builder";
 import { AgentRegistrationBuilder } from "./builder/application-registration-builder";
 import { getResource } from "./rdf-document";
-import { NoApplicationRegistrationError } from "./errors/no-application-registration";
 import { SocialAgentProfileDocument } from "./profile-documents/social-agent-profile-document";
 import { DataRegistryResource } from "./data-registry-container";
 import { RegistrySetResource, createRegistriesSet } from "./registry-set-container";
@@ -23,12 +21,7 @@ import { AgentRegistryResource } from "./agent-registry-container";
 import { ApplicationProfileDocument } from "./profile-documents/application-profile-document";
 import { webId2AuthorizationAgentUrl } from "./utils/uri-convert";
 import { getPodUrlAll } from "@inrupt/solid-client";
-
-function helper(webId: string, session: Session) {
-    let pod: string = "";
-    getPodUrlAll(webId, { fetch: session.fetch }).then(pods => { pod = pods[0]})
-    return pod
-}
+import { NoApplicationRegistrationError } from "./errors/application-registration-not-exist";
 
 export class AuthorizationAgent {
     agentRegistryContainer!: string;
@@ -57,7 +50,7 @@ export class AuthorizationAgent {
         );
 
         let registiesSet: RegistrySetResource;
-        if (profileDocument.hasRegistrySet()) {
+        if (profileDocument.HasRegistrySet) {
             registiesSet = await profileDocument.getRegistrySet(this.session.fetch);
         } else {
             registiesSet = await createRegistriesSet(

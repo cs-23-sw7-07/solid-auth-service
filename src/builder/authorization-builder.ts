@@ -40,7 +40,7 @@ export class AuthorizationBuilder {
     }
 
     async createDataAuthorization(dataAccessScope: DataAccessScope) {
-        const shapeTree = dataAccessScope.accessNeed.getRegisteredShapeTree();
+        const shapeTree = dataAccessScope.accessNeed.RegisteredShapeTree;
         if (!shapeTree)
             throw new Error(
                 `The access need ${dataAccessScope.accessNeed.uri} has no registrated RegisteredShapeTree.`,

@@ -39,7 +39,7 @@ export class AccessNeedGroup extends RDFResource {
         return needs;
     }
 
-    getReplaces(): string | undefined {
+    get Replaces(): string | undefined {
         return this.getObjectValueFromPredicate(INTEROP + "replaces");
     }
 

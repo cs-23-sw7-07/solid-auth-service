@@ -66,7 +66,7 @@ export async function createRegistriesSet(
     );
 
     await updateContainerResource(fetch, registriesContainer, registriesStore).then((_) =>
-        profileDocument.addhasRegistrySet(registriesContainer, fetch),
+        profileDocument.addHasRegistrySet(registriesContainer, fetch),
     );
 
     return new RegistrySetResource(registriesContainer, registriesStore, {});

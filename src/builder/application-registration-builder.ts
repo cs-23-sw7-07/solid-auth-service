@@ -34,10 +34,10 @@ export class AgentRegistrationBuilder {
             await grantBuilder.createDataGrants(builder.getCreatedDataAuthorizations());
             await grantBuilder.createAccessGrant(builder.getCreatedAccessAuthorization());
 
-            for (const grant of grantBuilder.getDataGrants()) {
+            for (const grant of grantBuilder.DataGrants) {
                 this.dataGrants.push(grant);
             }
-            this.accessGrants.push(grantBuilder.getAccessGrant());
+            this.accessGrants.push(grantBuilder.AccessGrant);
             builders.push(grantBuilder);
         }
 
@@ -48,7 +48,7 @@ export class AgentRegistrationBuilder {
             new Date(),
             new Date(),
             registeredAgent,
-            builders.map((builder) => builder.getAccessGrant()),
+            builders.map((builder) => builder.AccessGrant),
         );
     }
 
@@ -119,18 +119,18 @@ export class GrantNeedGroupBuilder implements IDataGrantBuilder {
         }
     }
 
-    getDataGrants(): DataGrant[] {
+    get DataGrants(): DataGrant[] {
         return Array.from(this.dataGrants.values()).flat();
     }
 
     createAccessGrant(accessAuthorization: AccessAuthorization) {
         this.accessGrant = accessAuthorization.toAccessGrant(
             this.generateId(),
-            this.getDataGrants(),
+            this.DataGrants,
         );
     }
 
-    getAccessGrant(): AccessGrant {
+    get AccessGrant(): AccessGrant {
         if (!this.accessGrant) throw new Error("The access grant has not been generated.");
         return this.accessGrant;
     }

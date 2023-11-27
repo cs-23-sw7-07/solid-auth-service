@@ -116,9 +116,10 @@ async function getAuthorizationAgentsFromCache() {
             if (!session)
                 continue;
 
+            const webId = session.info.webId!;
             const autho = await AuthorizationAgent.new(session)
             await autho.setRegistriesSetContainer();
-            cache.set(autho.socialAgent.webID, autho);
+            cache.set(webId, autho);
         }
     } catch (error) {
         console.error("Error in getAuthorizationAgentsFromCache:", error);

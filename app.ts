@@ -23,6 +23,11 @@ import Link from "http-link-header";
 import path from "path";
 import { RedisSolidStorage } from "./src/redis/redis-storage";
 import { getResource } from "./src/rdf-document";
+import { Store, DataFactory } from "n3";
+import { INTEROP, type_a } from "./src/namespace";
+import { serializeTurtle } from "./src/utils/turtle-serializer";
+
+const { namedNode } = DataFactory
 
 config();
 const app = express();
@@ -189,6 +194,17 @@ authorization_router.get("/new/callback", async (req, res) => {
         return res.status(500).send("Internal Server Error");
     }
 });
+
+
+authorization_router.get("/:webId", async (req, res) => {
+    const authorization_agent: AuthorizationAgent = cache.get(authorizationAgentUrl2webId(req.params.webId))!
+    const authorization_agent_id = `${protocol}://${address}:${port}/agents/${req.params.webId}/`
+    const subject = namedNode(authorization_agent_id)
+    const store = new Store()
+    store.addQuad(subject, namedNode(type_a), namedNode(INTEROP + "AuthorizationAgent"))
+    store.addQuad(subject, namedNode(INTEROP + "hasAuthorizationRedirectEndpoint"), namedNode(authorization_agent_id + "redirect"))
+    res.status(200).send(await serializeTurtle(store, {}));
+})
 
 /*
 The endpoint for requesting if a Application have access to the Pod.

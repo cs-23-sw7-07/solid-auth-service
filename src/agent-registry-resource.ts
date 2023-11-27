@@ -14,11 +14,6 @@ export class AgentRegistryResource extends RDFResource {
         super(iri, dataset, prefixes);
     }
 
-    static async getResource(fetch: Fetch, uri: string): Promise<AgentRegistryResource> {
-        return readParseResource(fetch, uri)
-            .then((parse) => new AgentRegistryResource(uri, parse.dataset, parse.prefixes));
-    }
-
     getHasSocialAgentRegistration(): string[] | undefined {
         return this.getObjectValuesFromPredicate(INTEROP + "hasSocialAgentRegistration");
     }

@@ -1,5 +1,5 @@
 import { AccessAuthorization, Agent, DataAuthorization, Fetch } from "solid-interoperability";
-import { RDFResource } from "../rdf-document";
+import { RDFResource, getResource } from "../rdf-document";
 import { INTEROP } from "../namespace";
 import { AccessNeed } from "./access-need";
 import { AuthorizationAgent } from "../authorization-agent";
@@ -10,28 +10,6 @@ import { DataFactory, Prefixes } from "n3";
 export class AccessNeedGroup extends RDFResource {
     constructor(uri: string, dataset?: DatasetCore, prefixes?: Prefixes) {
         super(uri, dataset, prefixes);
-    }
-
-    static async getRdfDocument(uri: string, fetch: Fetch): Promise<AccessNeedGroup> {
-        return fetch(uri)
-            .then((res) => {
-                return res.text();
-            })
-            .then((res) => {
-                const a = parseTurtle(res, uri);
-                return a;
-            })
-            .then((result) => {
-                const a = new AccessNeedGroup(
-                    uri,
-                    result.dataset.match(DataFactory.namedNode(uri)),
-                    result.prefixes,
-                );
-                return a;
-            })
-            .catch((err) => {
-                throw new Error();
-            });
     }
 
     gethasAccessDescriptionSet(): string[] | undefined {
@@ -56,7 +34,7 @@ export class AccessNeedGroup extends RDFResource {
 
         let needs: AccessNeed[] = [];
         for (const uri of need_uris) {
-            needs.push(await AccessNeed.getRdfDocument(uri, fetch));
+            needs.push(await getResource(AccessNeed, fetch, uri));
         }
 
         return needs;

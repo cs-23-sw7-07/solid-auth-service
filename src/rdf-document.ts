@@ -17,11 +17,6 @@ export class RDFResource {
         if (prefixes) this.prefixes = prefixes;
     }
 
-    static async getResource(fetch: Fetch, uri: string): Promise<RDFResource> {
-        return readParseResource(fetch, uri)
-            .then((result) => new RDFResource(uri, result.dataset, result.prefixes));
-    }
-
     getTypeOfSubject(): string | undefined {
         return this.getObjectValueFromPredicate("http://www.w3.org/1999/02/22-rdf-syntax-ns#type");
     }
@@ -58,12 +53,12 @@ export class RDFResourceContainer extends RDFResource {
         super(uri, dataset, prefixes);
     }
 
-    static async getResource(fetch: Fetch, uri: string): Promise<RDFResourceContainer> {
-        return readParseResource(fetch, uri)
-            .then((result) => new RDFResourceContainer(uri, result.dataset, result.prefixes));
-    }
-
     protected async updateResource(fetch: Fetch, dataset: DatasetCore) {
         updateContainerResource(fetch, this.uri + ".meta", dataset);
     }
+}
+
+export function getResource<T extends RDFResource>(c: {new (uri: string, dataset?: DatasetCore, prefixes?: Prefixes): T}, fetch: Fetch, uri: string): Promise<T> {
+    return readParseResource(fetch, uri)
+        .then((result) => new c(uri, result.dataset, result.prefixes));
 }

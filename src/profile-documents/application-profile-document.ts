@@ -1,5 +1,5 @@
 import { Fetch } from "solid-interoperability";
-import { RDFResource } from "../rdf-document";
+import { RDFResource, getResource } from "../rdf-document";
 import { INTEROP } from "../namespace";
 import { AccessNeedGroup } from "../application/access-need-group";
 import { DatasetCore } from "@rdfjs/types";
@@ -9,20 +9,6 @@ import { parseTurtle } from "../utils/turtle-parser";
 export class ApplicationProfileDocument extends RDFResource {
     constructor(webId: string, dataset?: DatasetCore, prefixes?: Prefixes) {
         super(webId, dataset, prefixes);
-    }
-
-    static async getRdfDocument(uri: string, fetch: Fetch): Promise<ApplicationProfileDocument> {
-        return fetch(uri)
-            .then((res) => res.text())
-            .then((res) => parseTurtle(res, uri))
-            .then(
-                (result) =>
-                    new ApplicationProfileDocument(
-                        uri,
-                        result.dataset.match(DataFactory.namedNode(uri)),
-                        result.prefixes,
-                    ),
-            );
     }
 
     getApplicationName(): string | undefined {
@@ -48,7 +34,7 @@ export class ApplicationProfileDocument extends RDFResource {
 
         let groups = [];
         for (const uri of values) {
-            groups.push(await AccessNeedGroup.getRdfDocument(uri, fetch));
+            groups.push(await getResource(AccessNeedGroup, fetch, uri));
         }
 
         return groups;

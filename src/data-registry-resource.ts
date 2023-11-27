@@ -11,11 +11,6 @@ export class DataRegistryResource extends RDFResourceContainer {
         super(webId, dataset, prefixes);
     }
 
-    static async getResource(fetch: Fetch, uri: string): Promise<DataRegistryResource> {
-        return readParseResource(fetch, uri)
-            .then((result) => new DataRegistryResource(uri, result.dataset, result.prefixes));
-    }
-
     async getHasDataRegistrations(fetch: Fetch): Promise<DataRegistration[]> {
         const values = this.getObjectValuesFromPredicate(data_registration);
 

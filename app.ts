@@ -22,6 +22,7 @@ import { AccessNeedGroup } from "./src/application/access-need-group";
 import Link from "http-link-header";
 import path from "path";
 import { RedisSolidStorage } from "./src/redis/redis-storage";
+import { getResource } from "./src/rdf-document";
 
 config();
 const app = express();
@@ -169,7 +170,7 @@ authorization_router.get("/new/callback", async (req, res) => {
 
         if (!authAgent) {
             const agent_URI = webId2AuthorizationAgentUrl(webId);
-            const profile_document: SocialAgentProfileDocument = await SocialAgentProfileDocument.getProfileDocument(webId);
+            const profile_document: SocialAgentProfileDocument = await getResource(SocialAgentProfileDocument, session.fetch, webId);
 
             if (!profile_document.hasAuthorizationAgent(agent_URI))
                 await profile_document.addhasAuthorizationAgent(agent_URI, session.fetch);
@@ -234,7 +235,7 @@ authorization_router.post("/:webId/wants-access", async (req, res) => {
         const fetch = authorizationAgent.session.fetch;
 
         if (approved) {
-            const applicationProfileDocument = await ApplicationProfileDocument.getRdfDocument(clientId, fetch);
+            const applicationProfileDocument = await getResource(ApplicationProfileDocument, fetch, clientId);
             const accesNeedGroups = await applicationProfileDocument.gethasAccessNeedGroup(fetch);
 
             const access = new Map<AccessNeedGroup, DataAccessScope[]>();

@@ -16,7 +16,7 @@ import { parseTurtle } from "./utils/turtle-parser";
 import { Approval } from "./application/approval";
 import { AuthorizationBuilder } from "./builder/authorization-builder";
 import { AgentRegistrationBuilder } from "./builder/application-registration-builder";
-import { RDFResource } from "./rdf-document";
+import { RDFResource, getResource } from "./rdf-document";
 import { ApplicationRegistrationNotExist } from "./errors/application-registration-not-exist";
 import { SocialAgentProfileDocument } from "./profile-documents/social-agent-profile-document";
 import { DataRegistryResource } from "./data-registry-resource";
@@ -38,7 +38,7 @@ export class AuthorizationAgent {
 
     async setRegistriesSetContainer() {
         const profile_document: SocialAgentProfileDocument =
-            await SocialAgentProfileDocument.getProfileDocument(this.social_agent.webID);
+            await getResource(SocialAgentProfileDocument, this.session.fetch, this.social_agent.webID);
 
         let registies_set: RegistrySetResource;
         if (profile_document.hasRegistrySet()) {
@@ -79,7 +79,7 @@ export class AuthorizationAgent {
         await builder.build(approval.agent, authBuilders);
         await builder.storeToPod();
 
-        const agent_registry = await AgentRegistryResource.getResource(this.session.fetch,
+        const agent_registry = await getResource(AgentRegistryResource, this.session.fetch,
             this.AgentRegistry_container,
         );
         await agent_registry.addRegistration(
@@ -90,9 +90,9 @@ export class AuthorizationAgent {
     }
 
     async findAgentRegistrationInPod(webId: string): Promise<AgentRegistration> {
-        const agentRegistrySet = await AgentRegistryResource.getResource(this.session.fetch, this.AgentRegistry_container)
+        const agentRegistrySet = await getResource(AgentRegistryResource, this.session.fetch, this.AgentRegistry_container)
         const profile_document: ApplicationProfileDocument =
-            await ApplicationProfileDocument.getRdfDocument(webId, this.session.fetch);
+            await getResource(ApplicationProfileDocument, this.session.fetch, webId);
         const type = profile_document.getTypeOfSubject();
         const registration_type = getRegistrationTypes(type);
         const registrations_iri: string[] | undefined =
@@ -131,7 +131,7 @@ export class AuthorizationAgent {
     }
 
     getAllDataRegistrations(): Promise<DataRegistration[]> {
-        return DataRegistryResource.getResource(this.session.fetch, this.DataRegistry_container).then((data_registry) =>
+        return getResource(DataRegistryResource, this.session.fetch, this.DataRegistry_container).then((data_registry) =>
             data_registry.getHasDataRegistrations(this.session.fetch),
         );
     }

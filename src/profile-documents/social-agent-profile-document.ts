@@ -16,13 +16,6 @@ export class SocialAgentProfileDocument extends RDFResource {
         super(webId, dataset, prefixes);
     }
 
-    static async getProfileDocument(uri: string): Promise<SocialAgentProfileDocument> {
-        return fetch(uri)
-            .then((res) => res.text())
-            .then((res) => parseTurtle(res, uri))
-            .then((result) => new SocialAgentProfileDocument(uri, result.dataset, result.prefixes));
-    }
-
     hasAuthorizationAgent(authorization_uri: string): boolean {
         const authorization_agents = this.getObjectValuesFromPredicate(
             INTEROP + "hasAuthorizationAgent",

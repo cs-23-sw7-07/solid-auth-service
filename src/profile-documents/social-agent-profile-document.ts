@@ -1,5 +1,4 @@
 import N3, { Prefixes } from "n3";
-import { Session } from "@inrupt/solid-client-authn-node";
 import { parseTurtle } from "../utils/turtle-parser";
 import { serializeTurtle } from "../utils/turtle-serializer";
 import { DatasetCore } from "@rdfjs/types";
@@ -28,7 +27,7 @@ export class SocialAgentProfileDocument extends RDFResource {
     async addhasAuthorizationAgent(agent_URI: string, fetch: Fetch) {
         this.dataset.add(
             quad(
-                this.getSubjectWebId(),
+                this.SubjectWebId,
                 namedNode(INTEROP + "hasAuthorizationAgent"),
                 namedNode(agent_URI),
                 defaultGraph(),
@@ -53,7 +52,7 @@ export class SocialAgentProfileDocument extends RDFResource {
     async addhasRegistrySet(registries_container: string, fetch: Fetch) {
         this.dataset.add(
             quad(
-                this.getSubjectWebId(),
+                this.SubjectWebId,
                 namedNode(INTEROP + "hasRegistrySet"),
                 namedNode(registries_container),
                 defaultGraph(),
@@ -74,7 +73,7 @@ export class SocialAgentProfileDocument extends RDFResource {
         });
     }
 
-    getSubjectWebId() {
+    get SubjectWebId() {
         for (const quad of this.dataset.match(null, namedNode(oidcIssuer_PREDICATE))) {
             return quad.subject;
         }

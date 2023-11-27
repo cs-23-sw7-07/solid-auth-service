@@ -46,7 +46,7 @@ export class AuthorizationBuilder {
             );
 
         const dataRegs: DataRegistration[] =
-            await this.authorizationAgent.getAllDataRegistrations();
+            await this.authorizationAgent.AllDataRegistrations;
         const exists = dataRegs.some((dataReg) => dataReg.registeredShapeTree === shapeTree);
 
         if (!exists) {
@@ -74,7 +74,9 @@ export class AuthorizationBuilder {
                 serializedDataset,
             );
 
-            const dataRegistry = await getContainterResource(DataRegistryResource, this.authorizationAgent.session.fetch,
+            const dataRegistry = await getContainterResource(
+                DataRegistryResource,
+                this.authorizationAgent.session.fetch,
                 this.authorizationAgent.DataRegistry_container,
             );
             await dataRegistry.addHasDataRegistration(

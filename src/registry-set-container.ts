@@ -15,15 +15,15 @@ export class RegistrySetResource extends RDFResourceContainer {
         super(iri, dataset, prefixes);
     }
 
-    getHasAgentRegistry(): string | undefined {
+    get HasAgentRegistry(): string | undefined {
         return this.getObjectValueFromPredicate(INTEROP + "hasAgentRegistry");
     }
 
-    gethasAuthorizationRegistry(): string | undefined {
+    get HasAuthorizationRegistry(): string | undefined {
         return this.getObjectValueFromPredicate(INTEROP + "hasAuthorizationRegistry");
     }
 
-    gethasDataRegistry(): string | undefined {
+    get HasDataRegistry(): string | undefined {
         return this.getObjectValueFromPredicate(INTEROP + "hasDataRegistry");
     }
 }
@@ -65,8 +65,8 @@ export async function createRegistriesSet(
         namedNode(DataRegistry_container),
     );
 
-    await updateContainerResource(fetch, registries_container, registries_store).then(
-        (_) => profile_document.addhasRegistrySet(registries_container, fetch),
+    await updateContainerResource(fetch, registries_container, registries_store).then((_) =>
+        profile_document.addhasRegistrySet(registries_container, fetch),
     );
 
     return new RegistrySetResource(registries_container, registries_store, {});

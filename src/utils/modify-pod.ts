@@ -94,8 +94,8 @@ export function readResource(fetch: Fetch, url: string): Promise<string> {
 
 export function readParseResource(fetch: Fetch, url: string): Promise<ParserResult> {
     return fetch(url)
-    .then((res) => res.text())
-    .then((res) => parseTurtle(res, url))
+        .then((res) => res.text())
+        .then((res) => parseTurtle(res, url));
 }
 
 class InsertResourceError extends Error {

@@ -1,7 +1,5 @@
-import N3 from "n3";
 import { Session } from "@inrupt/solid-client-authn-node";
 import { randomUUID } from "crypto";
-import { readResource } from "./utils/modify-pod";
 import { INTEROP } from "./namespace";
 import {
     AgentRegistration,
@@ -12,11 +10,10 @@ import {
     RdfFactory,
     SocialAgent,
 } from "solid-interoperability";
-import { parseTurtle } from "./utils/turtle-parser";
 import { Approval } from "./application/approval";
 import { AuthorizationBuilder } from "./builder/authorization-builder";
 import { AgentRegistrationBuilder } from "./builder/application-registration-builder";
-import { RDFResource, getContainterResource, getResource } from "./rdf-document";
+import { getContainterResource, getResource } from "./rdf-document";
 import { ApplicationRegistrationNotExist } from "./errors/application-registration-not-exist";
 import { SocialAgentProfileDocument } from "./profile-documents/social-agent-profile-document";
 import { DataRegistryResource } from "./data-registry-container";
@@ -37,8 +34,11 @@ export class AuthorizationAgent {
     ) {}
 
     async setRegistriesSetContainer() {
-        const profile_document: SocialAgentProfileDocument =
-            await getResource(SocialAgentProfileDocument, this.session.fetch, this.social_agent.webID);
+        const profile_document: SocialAgentProfileDocument = await getResource(
+            SocialAgentProfileDocument,
+            this.session.fetch,
+            this.social_agent.webID,
+        );
 
         let registies_set: RegistrySetResource;
         if (profile_document.hasRegistrySet()) {
@@ -51,9 +51,9 @@ export class AuthorizationAgent {
             );
         }
 
-        this.AgentRegistry_container = registies_set.getHasAgentRegistry()!;
-        this.AuthorizationRegistry_container = registies_set.gethasAuthorizationRegistry()!;
-        this.DataRegistry_container = registies_set.gethasDataRegistry()!;
+        this.AgentRegistry_container = registies_set.HasAgentRegistry!;
+        this.AuthorizationRegistry_container = registies_set.HasAuthorizationRegistry!;
+        this.DataRegistry_container = registies_set.HasDataRegistry!;
     }
 
     generateId(uri: string) {
@@ -79,7 +79,9 @@ export class AuthorizationAgent {
         await builder.build(approval.agent, authBuilders);
         await builder.storeToPod();
 
-        const agent_registry = await getContainterResource(AgentRegistryResource, this.session.fetch,
+        const agent_registry = await getContainterResource(
+            AgentRegistryResource,
+            this.session.fetch,
             this.AgentRegistry_container,
         );
         await agent_registry.addRegistration(
@@ -90,9 +92,16 @@ export class AuthorizationAgent {
     }
 
     async findAgentRegistrationInPod(webId: string): Promise<AgentRegistration> {
-        const agentRegistrySet = await getContainterResource(AgentRegistryResource, this.session.fetch, this.AgentRegistry_container)
-        const profile_document: ApplicationProfileDocument =
-            await getResource(ApplicationProfileDocument, this.session.fetch, webId);
+        const agentRegistrySet = await getContainterResource(
+            AgentRegistryResource,
+            this.session.fetch,
+            this.AgentRegistry_container,
+        );
+        const profile_document: ApplicationProfileDocument = await getResource(
+            ApplicationProfileDocument,
+            this.session.fetch,
+            webId,
+        );
         const type = profile_document.getTypeOfSubject();
         const registration_type = getRegistrationTypes(type);
         const registrations_iri: string[] | undefined =
@@ -104,11 +113,7 @@ export class AuthorizationAgent {
 
         const factory = new RdfFactory();
         const rdfs = registrations_iri.map(
-            async (iri) =>
-                await factory.parse(
-                    this.session.fetch,
-                    iri,
-                ),
+            async (iri) => await factory.parse(this.session.fetch, iri),
         );
 
         let agent_registration = [];
@@ -130,10 +135,12 @@ export class AuthorizationAgent {
         return reg;
     }
 
-    getAllDataRegistrations(): Promise<DataRegistration[]> {
-        return getContainterResource(DataRegistryResource, this.session.fetch, this.DataRegistry_container).then((data_registry) =>
-            data_registry.getHasDataRegistrations(this.session.fetch),
-        );
+    get AllDataRegistrations(): Promise<DataRegistration[]> {
+        return getContainterResource(
+            DataRegistryResource,
+            this.session.fetch,
+            this.DataRegistry_container,
+        ).then((data_registry) => data_registry.getHasDataRegistrations(this.session.fetch));
     }
 
     async getDataRegistrations(
@@ -147,7 +154,7 @@ export class AuthorizationAgent {
 
             return true;
         };
-        const dataRegs = await this.getAllDataRegistrations();
+        const dataRegs = await this.AllDataRegistrations;
         return dataRegs.filter((reg) => pShapeTree(reg) && pDataOwner(reg));
     }
 }

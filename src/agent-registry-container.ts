@@ -13,11 +13,11 @@ export class AgentRegistryResource extends RDFResourceContainer {
         super(iri, dataset, prefixes);
     }
 
-    getHasSocialAgentRegistration(): string[] | undefined {
+    get HasSocialAgentRegistration(): string[] | undefined {
         return this.getObjectValuesFromPredicate(INTEROP + "hasSocialAgentRegistration");
     }
 
-    getHasApplicationRegistration(): string[] | undefined {
+    get HasApplicationRegistration(): string[] | undefined {
         return this.getObjectValuesFromPredicate(INTEROP + "hasApplicationRegistration");
     }
 
@@ -35,7 +35,7 @@ export class AgentRegistryResource extends RDFResourceContainer {
         });
     }
 
-    gethasDataRegistry(): string | undefined {
+    get HasDataRegistry(): string | undefined {
         return this.getObjectValueFromPredicate(INTEROP + "hasDataRegistry");
     }
 }

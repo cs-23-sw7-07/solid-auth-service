@@ -1,8 +1,8 @@
 @prefix interop: <http://www.w3.org/ns/solid/interop#>.
 @prefix projectron: <http://localhost:3001/projectron/>.
-@prefix acme: <https://acme.example/>.
-@prefix acl: <https://www.w3.org/ns/auth/acl#>.
-@prefix solidtrees: <https://shapetrees.example/solid/>.
+@prefix acme: <http://acme.example/>.
+@prefix acl: <http://www.w3.org/ns/auth/acl#>.
+@prefix solidtrees: <http://shapetrees.example/solid/>.
 
 projectron:\#id
   a interop:Application ;

@@ -19,7 +19,7 @@ export class ParserResult {
  * @param text turtle text to parse.
  * @param source the IRI of the resource to parse.
  */
-export const parseTurtle = async (text: string, source = ""): Promise<ParserResult> => {
+export const parseTurtle = async (text: string, source?: string): Promise<ParserResult> => {
     const store = new Store();
     return new Promise((resolve, reject) => {
         const parserOptions: { baseIRI?: string } = {};

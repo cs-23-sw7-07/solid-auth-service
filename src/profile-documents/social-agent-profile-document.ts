@@ -6,7 +6,7 @@ import { DatasetCore } from "@rdfjs/types";
 import { RDFResource } from "../rdf-document";
 import { INTEROP } from "../namespace";
 import { Fetch } from "solid-interoperability";
-import { RegistrySetResource } from "../registry-set-resource";
+import { RegistrySetResource } from "../registry-set-container";
 const { quad, namedNode, defaultGraph } = N3.DataFactory;
 
 const oidcIssuer_PREDICATE = "http://www.w3.org/ns/solid/terms#oidcIssuer";

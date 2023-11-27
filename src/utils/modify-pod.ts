@@ -8,7 +8,7 @@ export async function insertTurtleResource(fetch: Fetch, uri: string, document_r
         method: "PUT",
         body: document_rdf,
         headers: {
-            link: '<http://www.w3.org/ns/ldp#Resource>; rel="type"',
+            link: '<https://www.w3.org/ns/ldp#Resource>; rel="type"',
             "Content-Type": "text/turtle",
         },
     }).then((res) => {
@@ -62,7 +62,7 @@ export async function updateContainerResource(
     dataset: DatasetCore,
 ) {
     const body = await insertPatch(dataset);
-    await fetch(container_iri, {
+    await fetch(container_iri + ".meta", {
         method: "PATCH",
         body: body,
         headers: {

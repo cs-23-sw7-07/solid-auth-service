@@ -54,11 +54,16 @@ export class RDFResourceContainer extends RDFResource {
     }
 
     protected async updateResource(fetch: Fetch, dataset: DatasetCore) {
-        updateContainerResource(fetch, this.uri + ".meta", dataset);
+        updateContainerResource(fetch, this.uri, dataset);
     }
 }
 
 export function getResource<T extends RDFResource>(c: {new (uri: string, dataset?: DatasetCore, prefixes?: Prefixes): T}, fetch: Fetch, uri: string): Promise<T> {
+    return readParseResource(fetch, uri)
+        .then((result) => new c(uri, result.dataset, result.prefixes));
+}
+
+export function getContainterResource<T extends RDFResource>(c: {new (uri: string, dataset?: DatasetCore, prefixes?: Prefixes): T}, fetch: Fetch, uri: string): Promise<T> {
     return readParseResource(fetch, uri)
         .then((result) => new c(uri, result.dataset, result.prefixes));
 }

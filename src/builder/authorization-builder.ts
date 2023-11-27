@@ -17,8 +17,8 @@ import N3 from "n3";
 const { Store, DataFactory } = N3;
 const { namedNode } = DataFactory;
 import { parseTurtle } from "../utils/turtle-parser";
-import { DataRegistryResource } from "../data-registry-resource";
-import { getResource } from "../rdf-document";
+import { DataRegistryResource } from "../data-registry-container";
+import { getContainterResource, getResource } from "../rdf-document";
 
 export class AuthorizationBuilder {
     private data_authorizations: Map<string, DataAuthorization> = new Map<
@@ -62,7 +62,7 @@ export class AuthorizationBuilder {
 
             const fetch = this.authorizationAgent.session.fetch;
             await createContainer(fetch, dataReg.id);
-            const container_iri = dataReg.id + ".meta";
+            const container_iri = dataReg.id;
 
             const dataset: string = (await new RdfFactory().create(dataReg)) as string;
 
@@ -74,7 +74,7 @@ export class AuthorizationBuilder {
                 serializedDataset,
             );
 
-            const dataRegistry = await getResource(DataRegistryResource, this.authorizationAgent.session.fetch,
+            const dataRegistry = await getContainterResource(DataRegistryResource, this.authorizationAgent.session.fetch,
                 this.authorizationAgent.DataRegistry_container,
             );
             await dataRegistry.addHasDataRegistration(
@@ -115,7 +115,7 @@ export class AuthorizationBuilder {
         );
         await updateContainerResource(
             this.authorizationAgent.session.fetch,
-            this.authorizationAgent.AuthorizationRegistry_container + ".meta",
+            this.authorizationAgent.AuthorizationRegistry_container,
             AuthorizationRegistry_store,
         );
     }

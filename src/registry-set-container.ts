@@ -1,5 +1,5 @@
 import { DatasetCore } from "@rdfjs/types";
-import { RDFResource } from "./rdf-document";
+import { RDFResourceContainer } from "./rdf-document";
 import { Prefixes, Store } from "n3";
 import N3 from "n3";
 import { INTEROP, type_a } from "./namespace";
@@ -10,7 +10,7 @@ import { SocialAgentProfileDocument } from "./profile-documents/social-agent-pro
 const { DataFactory } = N3;
 const { namedNode } = DataFactory;
 
-export class RegistrySetResource extends RDFResource {
+export class RegistrySetResource extends RDFResourceContainer {
     constructor(iri: string, dataset?: DatasetCore, prefixes?: Prefixes) {
         super(iri, dataset, prefixes);
     }
@@ -65,7 +65,7 @@ export async function createRegistriesSet(
         namedNode(DataRegistry_container),
     );
 
-    await updateContainerResource(fetch, registries_container + ".meta", registries_store).then(
+    await updateContainerResource(fetch, registries_container, registries_store).then(
         (_) => profile_document.addhasRegistrySet(registries_container, fetch),
     );
 

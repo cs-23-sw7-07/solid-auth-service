@@ -120,9 +120,9 @@ async function getAuthorizationAgentsFromCache() {
             const webId = session.info.webId!;
             const agent_URI = webId2AuthorizationAgentUrl(webId);
             const pods = await getPodUrlAll(webId, { fetch: session.fetch });
-
-            cache.set(webId, new AuthorizationAgent(new SocialAgent(webId), new ApplicationAgent(agent_URI), pods[0], session));
-            await cache.get(webId)!.setRegistriesSetContainer();
+            const autho = new AuthorizationAgent(new SocialAgent(webId), new ApplicationAgent(agent_URI), pods[0], session)
+            await autho.setRegistriesSetContainer();
+            cache.set(webId, autho);
         }
     } catch (error) {
         console.error("Error in getAuthorizationAgentsFromCache:", error);
@@ -196,43 +196,42 @@ authorization_router.get("/new/callback", async (req, res) => {
 });
 
 
-authorization_router.get("/:webId", async (req, res) => {
-    const authorization_agent: AuthorizationAgent = cache.get(authorizationAgentUrl2webId(req.params.webId))!
-    const authorization_agent_id = `${protocol}://${address}:${port}/agents/${req.params.webId}/`
-    const subject = namedNode(authorization_agent_id)
-    const store = new Store()
-    store.addQuad(subject, namedNode(type_a), namedNode(INTEROP + "AuthorizationAgent"))
-    store.addQuad(subject, namedNode(INTEROP + "hasAuthorizationRedirectEndpoint"), namedNode(authorization_agent_id + "redirect"))
-    res.status(200).send(await serializeTurtle(store, {}));
-})
-
 /*
 The endpoint for requesting if a Application have access to the Pod.
-Returns the agent registration of the requesting application agent as JSON
 */
-authorization_router.head("/:webId", async (req, res) => {
+authorization_router.get("/:webId", async (req, res) => {
     const authorization_agent: AuthorizationAgent = cache.get(authorizationAgentUrl2webId(req.params.webId))!
-    const client_id: string = req.query.client_id as string
-    try {
-        const registration: ApplicationRegistration = await authorization_agent.findAgentRegistrationInPod(client_id) as ApplicationRegistration
-        res.status(200).send(JSON.stringify(registration));
-    } catch (error) {
-        console.error(error)
-        res.status(400).send("No registration found for this WebId: " + req.params.webId);
+    if (!authorization_agent) {
+        return res.sendStatus(400);
+    }
+
+    if (req.method == "HEAD") {
+        if (typeof(req.query.client_id) != "string") {
+            res.status(400).send('Bad Request: Missing "client_id" parameter');
+        }
+    
+        const authorization_agent: AuthorizationAgent = cache.get(authorizationAgentUrl2webId(req.params.webId))!
+        const client_id: string = req.query.client_id as string
+        try {
+            const registration: ApplicationRegistration = await authorization_agent.findAgentRegistrationInPod(client_id) as ApplicationRegistration
+            console.log(registration.id)
+            res.header('Link', `<${client_id}>; anchor="${registration.id}"; rel="https://www.w3.org/ns/solid/interop#registeredAgent"`)
+            return res.status(200).send();
+        } catch (error) {
+            console.error(error)
+            return res.status(400).send("No registration found for this WebId: " + req.params.webId);
+        }
+    }
+    else {
+        const authorization_agent_id = `${protocol}://${address}:${port}/agents/${req.params.webId}/`
+        const subject = namedNode(authorization_agent_id)
+        const store = new Store()
+        store.addQuad(subject, namedNode(type_a), namedNode(INTEROP + "AuthorizationAgent"))
+        store.addQuad(subject, namedNode(INTEROP + "hasAuthorizationRedirectEndpoint"), namedNode(authorization_agent_id + "wants-access"))
+        res.setHeader('content-type', 'text/turtle');
+        return res.status(200).send(await serializeTurtle(store, {}));
     }
 })
-
-/**
- * Redirect request for wanting access to a Pod
- */
-authorization_router.get("/:webId/redirect", async (req, res) => {
-    if (typeof(req.query.client_id) != "string") {
-        res.status(400).send('Bad Request: Missing "client_id" parameter');
-    }
-
-    const clientId: string = req.query.client_id as string;
-    res.redirect(`/${req.params.webId}/wants-access?client_id=` + clientId)
-});
 
 /*
 The endpoint for the Application wanting access to a Pod

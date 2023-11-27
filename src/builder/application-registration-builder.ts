@@ -70,7 +70,7 @@ export class AgentRegistrationBuilder {
 
         await updateContainerResource(
             session.fetch,
-            this.registration.id + ".meta",
+            this.registration.id,
             (await parseTurtle(registration_turtle, this.registration.id)).dataset,
         );
     }

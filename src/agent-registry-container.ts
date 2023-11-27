@@ -1,15 +1,14 @@
 import { DatasetCore } from "@rdfjs/types";
-import { RDFResource } from "./rdf-document";
+import { RDFResourceContainer } from "./rdf-document";
 import { Prefixes, Store } from "n3";
 import N3 from "n3";
 import { INTEROP } from "./namespace";
 import { Agent, AgentRegistration, ApplicationAgent, Fetch } from "solid-interoperability";
-import { readParseResource } from "./utils/modify-pod";
 
 const { DataFactory } = N3;
 const { namedNode } = DataFactory;
 
-export class AgentRegistryResource extends RDFResource {
+export class AgentRegistryResource extends RDFResourceContainer {
     constructor(iri: string, dataset?: DatasetCore, prefixes?: Prefixes) {
         super(iri, dataset, prefixes);
     }

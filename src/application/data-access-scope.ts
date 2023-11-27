@@ -5,7 +5,7 @@ import { AuthorizationBuilder } from "../builder/authorization-builder";
 export abstract class DataAccessScope {
     constructor(public accessNeed: AccessNeed) {}
 
-    abstract toDataAuthoization(builder: AuthorizationBuilder): Promise<DataAuthorization>;
+    abstract toDataAuthorization(builder: AuthorizationBuilder): Promise<DataAuthorization>;
 }
 
 export class DataAccessScopeAll extends DataAccessScope {
@@ -13,7 +13,7 @@ export class DataAccessScopeAll extends DataAccessScope {
         super(accessNeed);
     }
 
-    async toDataAuthoization(builder: AuthorizationBuilder): Promise<DataAuthorization> {
+    async toDataAuthorization(builder: AuthorizationBuilder): Promise<DataAuthorization> {
         return new DataAuthorization(
             builder.generateId(),
             builder.authorizationAgent.social_agent,

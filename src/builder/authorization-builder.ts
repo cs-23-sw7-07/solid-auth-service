@@ -85,7 +85,7 @@ export class AuthorizationBuilder {
             );
         }
 
-        const data_authorization = await dataAccessScope.toDataAuthoization(this);
+        const data_authorization = await dataAccessScope.toDataAuthorization(this);
         this.data_authorizations.set(dataAccessScope.accessNeed.uri, data_authorization);
     }
 

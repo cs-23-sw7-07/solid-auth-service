@@ -17,14 +17,14 @@ export class DataAccessScopeAll extends DataAccessScope {
         return new DataAuthorization(
             builder.generateId(),
             builder.authorizationAgent.socialAgent,
-            this.accessNeed.getRegisteredShapeTree()!,
-            this.accessNeed.getAccessModes(),
+            this.accessNeed.RegisteredShapeTree!,
+            this.accessNeed.AccessModes,
             GrantScope.All,
             this.accessNeed.uri,
             undefined,
             undefined,
             undefined,
-            this.accessNeed.getCreatorAccessModes(),
+            this.accessNeed.CreatorAccessModes,
         );
     }
 }

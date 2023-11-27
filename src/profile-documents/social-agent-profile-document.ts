@@ -34,7 +34,7 @@ export class SocialAgentProfileDocument extends RDFResource {
         await this.updateProfile(fetch);
     }
 
-    hasRegistrySet(): boolean {
+    get HasRegistrySet(): boolean {
         const sets = this.getObjectValuesFromPredicate(INTEROP + "hasRegistrySet");
         return sets != undefined;
     }

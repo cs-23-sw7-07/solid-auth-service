@@ -9,11 +9,11 @@ export class AccessNeed extends RDFResource {
         super(uri, dataset, prefixes);
     }
 
-    getRegisteredShapeTree(): string | undefined {
+    get RegisteredShapeTree(): string | undefined {
         return this.getObjectValueFromPredicate(INTEROP + "registeredShapeTree");
     }
 
-    getAccessModes(): AccessMode[] {
+    get AccessModes(): AccessMode[] {
         const values: string[] | undefined = this.getObjectValuesFromPredicate(
             INTEROP + "accessMode",
         );
@@ -23,7 +23,7 @@ export class AccessNeed extends RDFResource {
         return [];
     }
 
-    getCreatorAccessModes() {
+    get CreatorAccessModes() {
         const values: string[] | undefined = this.getObjectValuesFromPredicate(
             INTEROP + "creatorAccessMode",
         );
@@ -33,21 +33,21 @@ export class AccessNeed extends RDFResource {
         return [];
     }
 
-    getAccessNecessity(): string | undefined {
+    get AccessNecessity(): string | undefined {
         return this.getObjectValueFromPredicate(INTEROP + "accessNecessity");
     }
 
-    getHasDataInstance(): string[] | undefined {
+    get HasDataInstance(): string[] | undefined {
         return this.getObjectValuesFromPredicate(INTEROP + "hasDataInstance");
     }
 
     async getInheritsFromNeed(fetch: Fetch): Promise<AccessNeed | undefined> {
-        const inherit_uri: string | undefined = this.getObjectValueFromPredicate(
+        const inheritUri: string | undefined = this.getObjectValueFromPredicate(
             INTEROP + "inheritsFromNeed",
         );
 
-        if (inherit_uri) {
-            return await getResource(AccessNeed, fetch, inherit_uri);
+        if (inheritUri) {
+            return await getResource(AccessNeed, fetch, inheritUri);
         }
         return undefined;
     }

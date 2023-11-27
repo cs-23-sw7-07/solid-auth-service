@@ -15,7 +15,7 @@ import { Approval } from "./application/approval";
 import { AuthorizationBuilder } from "./builder/authorization-builder";
 import { AgentRegistrationBuilder } from "./builder/application-registration-builder";
 import { getResource } from "./rdf-document";
-import { NoApplicationRegistrationError } from "./errors/application-registration-not-exist";
+import { NoApplicationRegistrationError } from "./errors/no-application-registration";
 import { SocialAgentProfileDocument } from "./profile-documents/social-agent-profile-document";
 import { DataRegistryResource } from "./data-registry-container";
 import { RegistrySetResource, createRegistriesSet } from "./registry-set-container";

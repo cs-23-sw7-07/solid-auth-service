@@ -9,12 +9,11 @@ import { config } from "dotenv";
 import * as fs from "fs";
 import * as https from "https";
 import { AuthorizationAgent } from "./src/authorization-agent";
-import { getPodUrlAll } from "@inrupt/solid-client";
 import { SocialAgentProfileDocument } from "./src/profile-documents/social-agent-profile-document";
 import { authorizationAgentUrl2webId, webId2AuthorizationAgentUrl } from "./src/utils/uri-convert";
 import { AccessApprovalHandler } from "./src/handlers/AccessApprovalHandler";
 import { ApplicationRegistration } from "solid-interoperability/src/data-management/data-model/agent-registration/application-registration"
-import { ApplicationAgent, serializeTurtle, SocialAgent } from "solid-interoperability";
+import { ApplicationAgent, serializeTurtle } from "solid-interoperability";
 import { deleteContainerResource, insertTurtleResource, readResource } from "./src/utils/modify-pod";
 import { ApplicationProfileDocument } from "./src/profile-documents/application-profile-document";
 import { DataAccessScope, DataAccessScopeAll } from "./src/application/data-access-scope";
@@ -35,7 +34,7 @@ export const address = process.env.ADDRESS || "localhost";
 const hostname = "0.0.0.0";
 const useHttps = process.env?.HTTPS == "TRUE";
 export const protocol = `http${useHttps ? "s" : ""}://`;
-const private_key = process.env.PRIVATEKEY ?? "";
+const privateKey = process.env.PRIVATEKEY ?? "";
 const certificate = process.env.CERTIFICATE ?? "";
 
 const oidcIssuers = ["https://login.inrupt.com", "https://solidweb.me", "https://solidcommunity.net", "http://localhost:3000/"]
@@ -58,7 +57,7 @@ app.use(
 
 if (useHttps) {
     const options = {
-        key: fs.readFileSync(private_key),
+        key: fs.readFileSync(privateKey),
         cert: fs.readFileSync(certificate),
     };
 
@@ -73,10 +72,10 @@ if (useHttps) {
     });
 }
 
-const authorization_router = express.Router()
-app.use('/agents', authorization_router);
+const authorizationRouter = express.Router()
+app.use('/agents', authorizationRouter);
 
-authorization_router.get("/new", async (req, res) => {
+authorizationRouter.get("/new", async (req, res) => {
     // 1. Create a new Session
     const session = new Session({ storage: new RedisSolidStorage() });
     req.session!.sessionId = session.info.sessionId;
@@ -147,7 +146,7 @@ async function removePreviousSession(webId: string, expectSessionId: string) {
 }
 
 
-authorization_router.get("/new/callback", async (req, res) => {
+authorizationRouter.get("/new/callback", async (req, res) => {
     try {
         // 3. If the user is sent back to the `redirectUrl` provided in step 2,
         //    it means that the login has been initiated and can be completed. In
@@ -171,11 +170,11 @@ authorization_router.get("/new/callback", async (req, res) => {
         let authAgent = cache.get(webId);
 
         if (!authAgent) {
-            const agent_URI = webId2AuthorizationAgentUrl(webId);
-            const profile_document: SocialAgentProfileDocument = await getResource(SocialAgentProfileDocument, session.fetch, webId);
+            const agentURI = webId2AuthorizationAgentUrl(webId);
+            const profileDocument: SocialAgentProfileDocument = await getResource(SocialAgentProfileDocument, session.fetch, webId);
 
-            if (!profile_document.hasAuthorizationAgent(agent_URI))
-                await profile_document.addhasAuthorizationAgent(agent_URI, session.fetch);
+            if (!profileDocument.hasAuthorizationAgent(agentURI))
+                await profileDocument.addhasAuthorizationAgent(agentURI, session.fetch);
 
             authAgent = await AuthorizationAgent.new(session);
             cache.set(webId, authAgent);
@@ -186,7 +185,7 @@ authorization_router.get("/new/callback", async (req, res) => {
         if (session!.info.isLoggedIn)
             return res.send(`<p>Logged in with the WebID ${webId}. <a href="localhost:3001/agents/new"></p>`);
     } catch (error) {
-        console.error("Error in authorization_router callback:", error);
+        console.error("Error in authorizationRouter callback:", error);
         return res.status(500).send("Internal Server Error");
     }
 });
@@ -195,9 +194,9 @@ authorization_router.get("/new/callback", async (req, res) => {
 /*
 The endpoint for requesting if a Application have access to the Pod.
 */
-authorization_router.get("/:webId", async (req, res) => {
-    const authorization_agent: AuthorizationAgent = cache.get(authorizationAgentUrl2webId(req.params.webId))!
-    if (!authorization_agent) {
+authorizationRouter.get("/:webId", async (req, res) => {
+    const authorizationAgent: AuthorizationAgent = cache.get(authorizationAgentUrl2webId(req.params.webId))!
+    if (!authorizationAgent) {
         return res.sendStatus(400);
     }
 
@@ -206,12 +205,12 @@ authorization_router.get("/:webId", async (req, res) => {
             res.status(400).send('Bad Request: Missing "client_id" parameter');
         }
     
-        const authorization_agent: AuthorizationAgent = cache.get(authorizationAgentUrl2webId(req.params.webId))!
-        const client_id: string = req.query.client_id as string
+        const authorizationAgent: AuthorizationAgent = cache.get(authorizationAgentUrl2webId(req.params.webId))!
+        const clientId: string = req.query.client_id as string
         try {
-            const registration: ApplicationRegistration = await authorization_agent.findAgentRegistrationInPod(client_id) as ApplicationRegistration
+            const registration: ApplicationRegistration = await authorizationAgent.findAgentRegistrationInPod(clientId) as ApplicationRegistration
             console.log(registration.id)
-            res.header('Link', `<${client_id}>; anchor="${registration.id}"; rel="https://www.w3.org/ns/solid/interop#registeredAgent"`)
+            res.header('Link', `<${clientId}>; anchor="${registration.id}"; rel="https://www.w3.org/ns/solid/interop#registeredAgent"`)
             return res.status(200).send();
         } catch (error) {
             console.error(error)
@@ -219,11 +218,11 @@ authorization_router.get("/:webId", async (req, res) => {
         }
     }
     else {
-        const authorization_agent_id = `${protocol}://${address}:${port}/agents/${req.params.webId}/`
-        const subject = namedNode(authorization_agent_id)
+        const authorizationAgentId = `${protocol}://${address}:${port}/agents/${req.params.webId}/`
+        const subject = namedNode(authorizationAgentId)
         const store = new Store()
         store.addQuad(subject, namedNode(TYPE_A), namedNode(INTEROP + "AuthorizationAgent"))
-        store.addQuad(subject, namedNode(INTEROP + "hasAuthorizationRedirectEndpoint"), namedNode(authorization_agent_id + "wants-access"))
+        store.addQuad(subject, namedNode(INTEROP + "hasAuthorizationRedirectEndpoint"), namedNode(authorizationAgentId + "wants-access"))
         res.setHeader('content-type', 'text/turtle');
         return res.status(200).send(await serializeTurtle(store, {}));
     }
@@ -232,7 +231,7 @@ authorization_router.get("/:webId", async (req, res) => {
 /*
 The endpoint for the Application wanting access to a Pod
 */
-authorization_router.post("/:webId/wants-access", async (req, res) => {
+authorizationRouter.post("/:webId/wants-access", async (req, res) => {
     if (typeof(req.query.client_id) != "string") {
         res.status(400).send('Bad Request: Missing "client_id" parameter');
     }
@@ -268,13 +267,13 @@ authorization_router.post("/:webId/wants-access", async (req, res) => {
     }
 });
 
-const pods_router = express.Router()
-app.use('/pods', pods_router);
+const podsRouter = express.Router()
+app.use('/pods', podsRouter);
 
 /*
 Endpoint for inserting data into the Pod
 */
-pods_router.put("/:dataId/:webId", async (req, res) => {
+podsRouter.put("/:dataId/:webId", async (req, res) => {
     const dataId: string = req.params.dataId;
     const authorization: string = req.headers["Authorization"] as string;
     const link: string = req.headers["Link"] as string;
@@ -305,7 +304,7 @@ pods_router.put("/:dataId/:webId", async (req, res) => {
 /*
 Endpoint for getting data from the Pod
 */
-pods_router.get("/:dataIRI/:webId", async (req, res) => {
+podsRouter.get("/:dataIRI/:webId", async (req, res) => {
     const dataIRI: string = req.params.dataIRI;
     const authorizationAgent: AuthorizationAgent | undefined = cache.get(req.params.webId);
 
@@ -324,7 +323,7 @@ pods_router.get("/:dataIRI/:webId", async (req, res) => {
 /*
 Endpoint for deleting data from the Pod
 */
-pods_router.delete("/:dataIRI/:webId", async (req, res) => {
+podsRouter.delete("/:dataIRI/:webId", async (req, res) => {
     const dataId: string = req.params.dataIRI;
     const authorization: string = req.headers["Authorization"] as string;
     const link: string = req.headers["Link"] as string;
@@ -352,10 +351,10 @@ pods_router.delete("/:dataIRI/:webId", async (req, res) => {
     }
 });
 
-const projectron_router = express.Router()
-app.use('/projectron', projectron_router);
+const projectronRouter = express.Router()
+app.use('/projectron', projectronRouter);
 
-projectron_router.get("/", async (req, res) => {
+projectronRouter.get("/", async (req, res) => {
     const options = {
         root: path.join(__dirname, "../")
     };

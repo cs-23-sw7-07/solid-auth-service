@@ -11,28 +11,28 @@ export class AccessNeedGroup extends RDFResource {
         super(uri, dataset, prefixes);
     }
 
-    gethasAccessDescriptionSet(): string[] | undefined {
+    get HasAccessDescriptionSet(): string[] | undefined {
         return this.getObjectValuesFromPredicate(INTEROP + "hasAccessDescriptionSet");
     }
 
-    getAccessNecessity(): string | undefined {
+    get AccessNecessity(): string | undefined {
         return this.getObjectValueFromPredicate(INTEROP + "accessNecessity");
     }
 
-    getAccessScenario(): string[] | undefined {
+    get AccessScenario(): string[] | undefined {
         return this.getObjectValuesFromPredicate(INTEROP + "accessScenario");
     }
 
-    getAuthenticatesAs(): string | undefined {
+    get AuthenticatesAs(): string | undefined {
         return this.getObjectValueFromPredicate(INTEROP + "authenticatesAs");
     }
 
     async getHasAccessNeed(fetch: Fetch): Promise<AccessNeed[]> {
-        const need_uris = this.getObjectValuesFromPredicate(INTEROP + "hasAccessNeed");
-        if (!need_uris) return [];
+        const needUris = this.getObjectValuesFromPredicate(INTEROP + "hasAccessNeed");
+        if (!needUris) return [];
 
         let needs: AccessNeed[] = [];
-        for (const uri of need_uris) {
+        for (const uri of needUris) {
             needs.push(await getResource(AccessNeed, fetch, uri));
         }
 
@@ -45,18 +45,18 @@ export class AccessNeedGroup extends RDFResource {
 
     toAccessAuthorization(
         id: string,
-        authorization_agent: AuthorizationAgent,
+        authorizationAgent: AuthorizationAgent,
         grantee: Agent,
-        data_authorizations: DataAuthorization[],
+        dataAuthorizations: DataAuthorization[],
     ): AccessAuthorization {
         return new AccessAuthorization(
             id,
-            authorization_agent.socialAgent,
-            authorization_agent.authorizationAgent,
+            authorizationAgent.socialAgent,
+            authorizationAgent.authorizationAgent,
             new Date(),
             grantee,
             this.uri,
-            data_authorizations,
+            dataAuthorizations,
         );
     }
 }

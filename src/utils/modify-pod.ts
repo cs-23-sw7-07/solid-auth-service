@@ -1,10 +1,10 @@
 import { DatasetCore } from "@rdfjs/types";
 import { Fetch, ParserResult, parseTurtle, serializeTurtle } from "solid-interoperability";
 
-export async function insertTurtleResource(fetch: Fetch, uri: string, document_rdf: string) {
+export async function insertTurtleResource(fetch: Fetch, uri: string, documentRdf: string) {
     await fetch(uri, {
         method: "PUT",
-        body: document_rdf,
+        body: documentRdf,
         headers: {
             link: '<https://www.w3.org/ns/ldp#Resource>; rel="type"',
             "Content-Type": "text/turtle",
@@ -16,7 +16,7 @@ export async function insertTurtleResource(fetch: Fetch, uri: string, document_r
     });
 }
 
-export async function createContainer(fetch: Fetch, uri_container: string) {
+export async function createContainer(fetch: Fetch, uriContainer: string) {
     const headers = new Headers({
         "Content-Type": "text/turtle",
     });
@@ -26,9 +26,9 @@ export async function createContainer(fetch: Fetch, uri_container: string) {
         headers: headers,
     };
 
-    const response = await fetch(uri_container, requestOptions);
+    const response = await fetch(uriContainer, requestOptions);
     if (!response.ok) {
-        throw new Error(`failed to create containers ${uri_container} ${response}`);
+        throw new Error(`failed to create containers ${uriContainer} ${response}`);
     }
 }
 
@@ -56,11 +56,11 @@ async function insertPatch(dataset: DatasetCore): Promise<string> {
 
 export async function updateContainerResource(
     fetch: Fetch,
-    container_iri: string,
+    containerIri: string,
     dataset: DatasetCore,
 ) {
     const body = await insertPatch(dataset);
-    await fetch(container_iri + ".meta", {
+    await fetch(containerIri + ".meta", {
         method: "PATCH",
         body: body,
         headers: {
@@ -68,7 +68,7 @@ export async function updateContainerResource(
         },
     }).then((res) => {
         if (!res.ok) {
-            throw new Error(`failed to patch ${container_iri}`);
+            throw new Error(`failed to patch ${containerIri}`);
         }
     });
 }

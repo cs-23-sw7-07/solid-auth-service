@@ -3,7 +3,6 @@ import { RDFResourceContainer } from "./rdf-document";
 import { DatasetCore } from "@rdfjs/types";
 import { DataRegistration, Fetch, RdfFactory } from "solid-interoperability";
 import { INTEROP, DATA_REGISTRATION } from "./namespace";
-import { readParseResource } from "./utils/modify-pod";
 const { quad, namedNode } = N3.DataFactory;
 
 export class DataRegistryResource extends RDFResourceContainer {
@@ -28,18 +27,18 @@ export class DataRegistryResource extends RDFResourceContainer {
         return regs;
     }
 
-    async addHasDataRegistration(fetch: Fetch, data_registration: DataRegistration) {
-        const quad_data_reg = quad(
+    async addHasDataRegistration(fetch: Fetch, dataRegistration: DataRegistration) {
+        const quadDataReg = quad(
             namedNode(this.uri),
             namedNode(INTEROP + "hasDataRegistration"),
-            namedNode(data_registration.id),
+            namedNode(dataRegistration.id),
         );
         const store = new Store();
 
-        store.add(quad_data_reg);
+        store.add(quadDataReg);
 
         await this.updateResource(fetch, store).then((_) => {
-            this.dataset.add(quad_data_reg);
+            this.dataset.add(quadDataReg);
         });
     }
 }

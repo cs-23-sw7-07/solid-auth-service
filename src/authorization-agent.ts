@@ -6,6 +6,7 @@ import {
     ApplicationAgent,
     ApplicationRegistration,
     DataRegistration,
+    Fetch,
     NotImplementedYet,
     RdfFactory,
     SocialAgent,
@@ -21,22 +22,31 @@ import { RegistrySetResource, createRegistriesSet } from "./registry-set-contain
 import { AgentRegistryResource } from "./agent-registry-container";
 import { ApplicationProfileDocument } from "./profile-documents/application-profile-document";
 import { webId2AuthorizationAgentUrl } from "./utils/uri-convert";
+import { getPodUrlAll } from "@inrupt/solid-client";
+
+function helper(webId: string, session: Session) {
+    let pod: string = "";
+    getPodUrlAll(webId, { fetch: session.fetch }).then(pods => { pod = pods[0]})
+    return pod
+}
 
 export class AuthorizationAgent {
     agentRegistryContainer!: string;
     authorizationRegistryContainer!: string;
     dataRegistryContainer!: string;
-    socialAgent: SocialAgent;
-    authorizationAgent: ApplicationAgent;
-
-    constructor(
-        public pod: string,
+    
+    private constructor(
         public session: Session,
-    ) {
+        public socialAgent: SocialAgent,
+        public authorizationAgent: ApplicationAgent,
+        public pod: string
+    ) { }
+
+    static async new(session: Session): Promise<AuthorizationAgent> {
         const webId = session.info.webId!;
         const agentUri = webId2AuthorizationAgentUrl(webId);
-        this.authorizationAgent = new ApplicationAgent(agentUri);
-        this.socialAgent = new SocialAgent(webId);
+        const pods = await getPodUrlAll(webId, { fetch: session.fetch });
+        return new AuthorizationAgent(session, new SocialAgent(webId), new ApplicationAgent(agentUri), pods[0])
     }
 
     async setRegistriesSetContainer() {

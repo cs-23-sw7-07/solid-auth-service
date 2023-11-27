@@ -14,7 +14,7 @@
     "test": "jest",
     "check": "prettier --check src && eslint src test",
     "fmt": "prettier --write src && eslint src test",
-    "server-run": "npx @solid/community-server -c @css:config/file.json -f solid-server/"
+    "solid-server": "npx @solid/community-server -c @css:config/file.json -f solid-server/"
   },
   "dependencies": {
     "@inrupt/solid-client": "^1.30.2",

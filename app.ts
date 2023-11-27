@@ -116,11 +116,9 @@ async function getAuthorizationAgentsFromCache() {
             if (!session)
                 continue;
 
-            const webId = session.info.webId!;
-            const pods = await getPodUrlAll(webId, { fetch: session.fetch });
-            const autho = new AuthorizationAgent(pods[0], session)
+            const autho = await AuthorizationAgent.new(session)
             await autho.setRegistriesSetContainer();
-            cache.set(webId, autho);
+            cache.set(autho.socialAgent.webID, autho);
         }
     } catch (error) {
         console.error("Error in getAuthorizationAgentsFromCache:", error);
@@ -178,8 +176,7 @@ authorization_router.get("/new/callback", async (req, res) => {
             if (!profile_document.hasAuthorizationAgent(agent_URI))
                 await profile_document.addhasAuthorizationAgent(agent_URI, session.fetch);
 
-            const pods = await getPodUrlAll(webId, { fetch: session.fetch });
-            authAgent = new AuthorizationAgent(pods[0], session);
+            authAgent = await AuthorizationAgent.new(session);
             cache.set(webId, authAgent);
             await authAgent.setRegistriesSetContainer();
         } else

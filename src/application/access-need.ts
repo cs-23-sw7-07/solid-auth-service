@@ -1,9 +1,8 @@
-import N3, { DataFactory, Prefixes } from "n3";
+import { Prefixes } from "n3";
 import { AccessMode, Fetch, getAccessmode } from "solid-interoperability";
 import { RDFResource, getResource } from "../rdf-document";
 import { INTEROP } from "../namespace";
 import { DatasetCore } from "@rdfjs/types";
-import { parseTurtle } from "../utils/turtle-parser";
 
 export class AccessNeed extends RDFResource {
     constructor(uri: string, dataset?: DatasetCore, prefixes?: Prefixes) {

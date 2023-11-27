@@ -12,11 +12,11 @@ import {
     IDataGrantBuilder,
     RdfFactory,
     SocialAgent,
+    parseTurtle,
 } from "solid-interoperability";
 import { AuthorizationBuilder } from "./authorization-builder";
 import { insertTurtleResource, updateContainerResource } from "../utils/modify-pod";
 import { Session } from "@inrupt/solid-client-authn-node";
-import { parseTurtle } from "../utils/turtle-parser";
 
 export class AgentRegistrationBuilder {
     private dataGrants: DataGrant[] = [];

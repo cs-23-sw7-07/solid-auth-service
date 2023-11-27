@@ -2,7 +2,7 @@ import N3, { Prefixes, Store } from "n3";
 import { RDFResourceContainer } from "./rdf-document";
 import { DatasetCore } from "@rdfjs/types";
 import { DataRegistration, Fetch, RdfFactory } from "solid-interoperability";
-import { INTEROP, data_registration } from "./namespace";
+import { INTEROP, DATA_REGISTRATION } from "./namespace";
 import { readParseResource } from "./utils/modify-pod";
 const { quad, namedNode } = N3.DataFactory;
 
@@ -12,7 +12,7 @@ export class DataRegistryResource extends RDFResourceContainer {
     }
 
     async getHasDataRegistrations(fetch: Fetch): Promise<DataRegistration[]> {
-        const values = this.getObjectValuesFromPredicate(data_registration);
+        const values = this.getObjectValuesFromPredicate(DATA_REGISTRATION);
 
         if (!values) return [];
 

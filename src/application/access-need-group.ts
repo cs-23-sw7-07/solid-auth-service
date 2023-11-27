@@ -3,9 +3,8 @@ import { RDFResource, getResource } from "../rdf-document";
 import { INTEROP } from "../namespace";
 import { AccessNeed } from "./access-need";
 import { AuthorizationAgent } from "../authorization-agent";
-import { parseTurtle } from "../utils/turtle-parser";
 import { DatasetCore } from "@rdfjs/types";
-import { DataFactory, Prefixes } from "n3";
+import { Prefixes } from "n3";
 
 export class AccessNeedGroup extends RDFResource {
     constructor(uri: string, dataset?: DatasetCore, prefixes?: Prefixes) {

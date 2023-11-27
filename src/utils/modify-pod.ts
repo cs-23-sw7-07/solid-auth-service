@@ -1,7 +1,5 @@
 import { DatasetCore } from "@rdfjs/types";
-import { serializeTurtle } from "./turtle-serializer";
-import { Fetch } from "solid-interoperability";
-import { ParserResult, parseTurtle } from "./turtle-parser";
+import { Fetch, ParserResult, parseTurtle, serializeTurtle } from "solid-interoperability";
 
 export async function insertTurtleResource(fetch: Fetch, uri: string, document_rdf: string) {
     await fetch(uri, {

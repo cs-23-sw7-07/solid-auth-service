@@ -4,6 +4,7 @@ import {
     DataAuthorization,
     DataRegistration,
     RdfFactory,
+    parseTurtle,
 } from "solid-interoperability";
 import { AuthorizationAgent } from "../authorization-agent";
 import { DataAccessScope } from "../application/data-access-scope";
@@ -14,11 +15,11 @@ import {
     updateContainerResource,
 } from "../utils/modify-pod";
 import N3 from "n3";
-const { Store, DataFactory } = N3;
-const { namedNode } = DataFactory;
-import { parseTurtle } from "../utils/turtle-parser";
 import { DataRegistryResource } from "../data-registry-container";
 import { getResource } from "../rdf-document";
+
+const { Store, DataFactory } = N3;
+const { namedNode } = DataFactory;
 
 export class AuthorizationBuilder {
     private dataAuthorizations: Map<string, DataAuthorization> = new Map<

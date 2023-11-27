@@ -1,35 +1,33 @@
 import N3, { Prefixes } from "n3";
-import { parseTurtle } from "../utils/turtle-parser";
-import { serializeTurtle } from "../utils/turtle-serializer";
 import { DatasetCore } from "@rdfjs/types";
 import { RDFResource } from "../rdf-document";
 import { INTEROP } from "../namespace";
-import { Fetch } from "solid-interoperability";
+import { Fetch, parseTurtle, serializeTurtle } from "solid-interoperability";
 import { RegistrySetResource } from "../registry-set-container";
 const { quad, namedNode, defaultGraph } = N3.DataFactory;
 
-const oidcIssuer_PREDICATE = "http://www.w3.org/ns/solid/terms#oidcIssuer";
+const OIDC_ISSUER_PREDICATE = "http://www.w3.org/ns/solid/terms#oidcIssuer";
 
 export class SocialAgentProfileDocument extends RDFResource {
     constructor(webId: string, dataset?: DatasetCore, prefixes?: Prefixes) {
         super(webId, dataset, prefixes);
     }
 
-    hasAuthorizationAgent(authorization_uri: string): boolean {
-        const authorization_agents = this.getObjectValuesFromPredicate(
+    hasAuthorizationAgent(authorizationUri: string): boolean {
+        const authorizationAgents = this.getObjectValuesFromPredicate(
             INTEROP + "hasAuthorizationAgent",
         );
         return (
-            authorization_agents != undefined && authorization_agents.includes(authorization_uri)
+            authorizationAgents != undefined && authorizationAgents.includes(authorizationUri)
         );
     }
 
-    async addhasAuthorizationAgent(agent_URI: string, fetch: Fetch) {
+    async addhasAuthorizationAgent(agentUri: string, fetch: Fetch) {
         this.dataset.add(
             quad(
                 this.SubjectWebId,
                 namedNode(INTEROP + "hasAuthorizationAgent"),
-                namedNode(agent_URI),
+                namedNode(agentUri),
                 defaultGraph(),
             ),
         );
@@ -49,12 +47,12 @@ export class SocialAgentProfileDocument extends RDFResource {
             .then((parsed) => new RegistrySetResource(set, parsed.dataset));
     }
 
-    async addhasRegistrySet(registries_container: string, fetch: Fetch) {
+    async addhasRegistrySet(registriesContainer: string, fetch: Fetch) {
         this.dataset.add(
             quad(
                 this.SubjectWebId,
                 namedNode(INTEROP + "hasRegistrySet"),
-                namedNode(registries_container),
+                namedNode(registriesContainer),
                 defaultGraph(),
             ),
         );
@@ -74,9 +72,9 @@ export class SocialAgentProfileDocument extends RDFResource {
     }
 
     get SubjectWebId() {
-        for (const quad of this.dataset.match(null, namedNode(oidcIssuer_PREDICATE))) {
+        for (const quad of this.dataset.match(null, namedNode(OIDC_ISSUER_PREDICATE))) {
             return quad.subject;
         }
-        throw new Error("No subject with a oidcIssuer");
+        throw new Error("No subject with an OIDC Issuer");
     }
 }

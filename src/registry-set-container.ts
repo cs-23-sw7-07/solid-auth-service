@@ -2,7 +2,7 @@ import { DatasetCore } from "@rdfjs/types";
 import { RDFResourceContainer } from "./rdf-document";
 import { Prefixes, Store } from "n3";
 import N3 from "n3";
-import { INTEROP, type_a } from "./namespace";
+import { INTEROP, TYPE_A } from "./namespace";
 import { Fetch } from "solid-interoperability";
 import { createContainer, updateContainerResource } from "./utils/modify-pod";
 import { SocialAgentProfileDocument } from "./profile-documents/social-agent-profile-document";
@@ -31,43 +31,43 @@ export class RegistrySetResource extends RDFResourceContainer {
 export async function createRegistriesSet(
     fetch: Fetch,
     pod: string,
-    profile_document: SocialAgentProfileDocument,
+    profileDocument: SocialAgentProfileDocument,
 ) {
-    const registries_container = pod + "Registries/";
-    const AgentRegistry_container = registries_container + "agentregisties/";
-    const AuthorizationRegistry_container = registries_container + "accessregisties/";
-    const DataRegistry_container = pod + "data/";
+    const registriesContainer = pod + "Registries/";
+    const agentRegistryContainer = registriesContainer + "agentregisties/";
+    const authorizationRegistryContainer = registriesContainer + "accessregisties/";
+    const dataRegistryContainer = pod + "data/";
 
-    await createContainer(fetch, registries_container);
-    await createContainer(fetch, AgentRegistry_container);
-    await createContainer(fetch, AuthorizationRegistry_container);
-    await createContainer(fetch, DataRegistry_container);
+    await createContainer(fetch, registriesContainer);
+    await createContainer(fetch, agentRegistryContainer);
+    await createContainer(fetch, authorizationRegistryContainer);
+    await createContainer(fetch, dataRegistryContainer);
 
-    const registries_store = new Store();
-    registries_store.addQuad(
-        namedNode(registries_container),
-        namedNode(type_a),
+    const registriesStore = new Store();
+    registriesStore.addQuad(
+        namedNode(registriesContainer),
+        namedNode(TYPE_A),
         namedNode(INTEROP + "RegistrySet"),
     );
-    registries_store.addQuad(
-        namedNode(registries_container),
+    registriesStore.addQuad(
+        namedNode(registriesContainer),
         namedNode(INTEROP + "hasAgentRegistry"),
-        namedNode(AgentRegistry_container),
+        namedNode(agentRegistryContainer),
     );
-    registries_store.addQuad(
-        namedNode(registries_container),
+    registriesStore.addQuad(
+        namedNode(registriesContainer),
         namedNode(INTEROP + "hasAuthorizationRegistry"),
-        namedNode(AuthorizationRegistry_container),
+        namedNode(authorizationRegistryContainer),
     );
-    registries_store.addQuad(
-        namedNode(registries_container),
+    registriesStore.addQuad(
+        namedNode(registriesContainer),
         namedNode(INTEROP + "hasDataRegistry"),
-        namedNode(DataRegistry_container),
+        namedNode(dataRegistryContainer),
     );
 
-    await updateContainerResource(fetch, registries_container, registries_store).then((_) =>
-        profile_document.addhasRegistrySet(registries_container, fetch),
+    await updateContainerResource(fetch, registriesContainer, registriesStore).then((_) =>
+        profileDocument.addhasRegistrySet(registriesContainer, fetch),
     );
 
-    return new RegistrySetResource(registries_container, registries_store, {});
+    return new RegistrySetResource(registriesContainer, registriesStore, {});
 }

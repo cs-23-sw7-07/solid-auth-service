@@ -14,7 +14,7 @@ import { SocialAgentProfileDocument } from "./src/profile-documents/social-agent
 import { authorizationAgentUrl2webId, webId2AuthorizationAgentUrl } from "./src/utils/uri-convert";
 import { AccessApprovalHandler } from "./src/handlers/AccessApprovalHandler";
 import { ApplicationRegistration } from "solid-interoperability/src/data-management/data-model/agent-registration/application-registration"
-import { ApplicationAgent, SocialAgent } from "solid-interoperability";
+import { ApplicationAgent, serializeTurtle, SocialAgent } from "solid-interoperability";
 import { deleteContainerResource, insertTurtleResource, readResource } from "./src/utils/modify-pod";
 import { ApplicationProfileDocument } from "./src/profile-documents/application-profile-document";
 import { DataAccessScope, DataAccessScopeAll } from "./src/application/data-access-scope";
@@ -24,8 +24,7 @@ import path from "path";
 import { RedisSolidStorage } from "./src/redis/redis-storage";
 import { getResource } from "./src/rdf-document";
 import { Store, DataFactory } from "n3";
-import { INTEROP, type_a } from "./src/namespace";
-import { serializeTurtle } from "./src/utils/turtle-serializer";
+import { INTEROP, TYPE_A } from "./src/namespace";
 
 const { namedNode } = DataFactory
 
@@ -225,7 +224,7 @@ authorization_router.get("/:webId", async (req, res) => {
         const authorization_agent_id = `${protocol}://${address}:${port}/agents/${req.params.webId}/`
         const subject = namedNode(authorization_agent_id)
         const store = new Store()
-        store.addQuad(subject, namedNode(type_a), namedNode(INTEROP + "AuthorizationAgent"))
+        store.addQuad(subject, namedNode(TYPE_A), namedNode(INTEROP + "AuthorizationAgent"))
         store.addQuad(subject, namedNode(INTEROP + "hasAuthorizationRedirectEndpoint"), namedNode(authorization_agent_id + "wants-access"))
         res.setHeader('content-type', 'text/turtle');
         return res.status(200).send(await serializeTurtle(store, {}));

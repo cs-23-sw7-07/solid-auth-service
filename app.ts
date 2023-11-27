@@ -118,9 +118,8 @@ async function getAuthorizationAgentsFromCache() {
                 continue;
 
             const webId = session.info.webId!;
-            const agent_URI = webId2AuthorizationAgentUrl(webId);
             const pods = await getPodUrlAll(webId, { fetch: session.fetch });
-            const autho = new AuthorizationAgent(new SocialAgent(webId), new ApplicationAgent(agent_URI), pods[0], session)
+            const autho = new AuthorizationAgent(pods[0], session)
             await autho.setRegistriesSetContainer();
             cache.set(webId, autho);
         }
@@ -180,8 +179,8 @@ authorization_router.get("/new/callback", async (req, res) => {
             if (!profile_document.hasAuthorizationAgent(agent_URI))
                 await profile_document.addhasAuthorizationAgent(agent_URI, session.fetch);
 
-            const pods = await getPodUrlAll(webId, { fetch: session!.fetch });
-            authAgent = new AuthorizationAgent(new SocialAgent(webId), new ApplicationAgent(agent_URI), pods[0], session);
+            const pods = await getPodUrlAll(webId, { fetch: session.fetch });
+            authAgent = new AuthorizationAgent(pods[0], session);
             cache.set(webId, authAgent);
             await authAgent.setRegistriesSetContainer();
         } else

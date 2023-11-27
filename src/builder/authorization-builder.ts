@@ -45,8 +45,7 @@ export class AuthorizationBuilder {
                 `The access need ${dataAccessScope.accessNeed.uri} has no registrated RegisteredShapeTree.`,
             );
 
-        const dataRegs: DataRegistration[] =
-            await this.authorizationAgent.AllDataRegistrations;
+        const dataRegs: DataRegistration[] = await this.authorizationAgent.AllDataRegistrations;
         const exists = dataRegs.some((dataReg) => dataReg.registeredShapeTree === shapeTree);
 
         if (!exists) {

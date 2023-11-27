@@ -20,18 +20,24 @@ import { DataRegistryResource } from "./data-registry-container";
 import { RegistrySetResource, createRegistriesSet } from "./registry-set-container";
 import { AgentRegistryResource } from "./agent-registry-container";
 import { ApplicationProfileDocument } from "./profile-documents/application-profile-document";
+import { webId2AuthorizationAgentUrl } from "./utils/uri-convert";
 
 export class AuthorizationAgent {
     AgentRegistry_container!: string;
     AuthorizationRegistry_container!: string;
     DataRegistry_container!: string;
+    social_agent: SocialAgent;
+    authorization_agent: ApplicationAgent;
 
     constructor(
-        public social_agent: SocialAgent,
-        public authorization_agent: ApplicationAgent,
         public pod: string,
         public session: Session,
-    ) {}
+    ) {
+        const webId = session.info.webId!;
+        const agent_URI = webId2AuthorizationAgentUrl(webId);
+        this.authorization_agent = new ApplicationAgent(agent_URI);
+        this.social_agent = new SocialAgent(webId);
+    }
 
     async setRegistriesSetContainer() {
         const profile_document: SocialAgentProfileDocument = await getResource(

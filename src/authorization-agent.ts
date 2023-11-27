@@ -14,7 +14,7 @@ import { Approval } from "./application/approval";
 import { AuthorizationBuilder } from "./builder/authorization-builder";
 import { AgentRegistrationBuilder } from "./builder/application-registration-builder";
 import { getResource } from "./rdf-document";
-import { ApplicationRegistrationNotExist } from "./errors/application-registration-not-exist";
+import { NoApplicationRegistrationError } from "./errors/application-registration-not-exist";
 import { SocialAgentProfileDocument } from "./profile-documents/social-agent-profile-document";
 import { DataRegistryResource } from "./data-registry-container";
 import { RegistrySetResource, createRegistriesSet } from "./registry-set-container";
@@ -114,7 +114,7 @@ export class AuthorizationAgent {
             agentRegistrySet.getObjectValuesFromPredicate(registration_type);
 
         if (!registrations_iri) {
-            throw new ApplicationRegistrationNotExist(webId);
+            throw new NoApplicationRegistrationError(webId);
         }
 
         const factory = new RdfFactory();
@@ -136,7 +136,7 @@ export class AuthorizationAgent {
         const reg = await agent_registration.find(
             async (reg) => (await reg).registeredAgent.webID == webId,
         );
-        if (!reg) throw new ApplicationRegistrationNotExist(webId);
+        if (!reg) throw new NoApplicationRegistrationError(webId);
 
         return reg;
     }

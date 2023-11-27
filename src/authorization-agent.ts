@@ -24,8 +24,8 @@ import { webId2AuthorizationAgentUrl } from "./utils/uri-convert";
 
 export class AuthorizationAgent {
     agentRegistryContainer!: string;
-    AuthorizationRegistry_container!: string;
-    DataRegistry_container!: string;
+    authorizationRegistryContainer!: string;
+    dataRegistryContainer!: string;
     socialAgent: SocialAgent;
     authorizationAgent: ApplicationAgent;
 
@@ -58,8 +58,8 @@ export class AuthorizationAgent {
         }
 
         this.agentRegistryContainer = registies_set.HasAgentRegistry!;
-        this.AuthorizationRegistry_container = registies_set.HasAuthorizationRegistry!;
-        this.DataRegistry_container = registies_set.HasDataRegistry!;
+        this.authorizationRegistryContainer = registies_set.HasAuthorizationRegistry!;
+        this.dataRegistryContainer = registies_set.HasDataRegistry!;
     }
 
     generateId(uri: string) {
@@ -145,7 +145,7 @@ export class AuthorizationAgent {
         return getResource(
             DataRegistryResource,
             this.session.fetch,
-            this.DataRegistry_container,
+            this.dataRegistryContainer,
         ).then((data_registry) => data_registry.getHasDataRegistrations(this.session.fetch));
     }
 

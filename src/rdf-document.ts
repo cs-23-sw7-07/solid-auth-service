@@ -63,13 +63,3 @@ export function getResource<T extends RDFResource>(
         (result) => new c(uri, result.dataset, result.prefixes),
     );
 }
-
-export function getContainterResource<T extends RDFResource>(
-    c: { new (uri: string, dataset?: DatasetCore, prefixes?: Prefixes): T },
-    fetch: Fetch,
-    uri: string,
-): Promise<T> {
-    return readParseResource(fetch, uri).then(
-        (result) => new c(uri, result.dataset, result.prefixes),
-    );
-}

@@ -13,7 +13,7 @@ import {
 import { Approval } from "./application/approval";
 import { AuthorizationBuilder } from "./builder/authorization-builder";
 import { AgentRegistrationBuilder } from "./builder/application-registration-builder";
-import { getContainterResource, getResource } from "./rdf-document";
+import { getResource } from "./rdf-document";
 import { ApplicationRegistrationNotExist } from "./errors/application-registration-not-exist";
 import { SocialAgentProfileDocument } from "./profile-documents/social-agent-profile-document";
 import { DataRegistryResource } from "./data-registry-container";
@@ -79,7 +79,7 @@ export class AuthorizationAgent {
         await builder.build(approval.agent, authBuilders);
         await builder.storeToPod();
 
-        const agent_registry = await getContainterResource(
+        const agent_registry = await getResource(
             AgentRegistryResource,
             this.session.fetch,
             this.AgentRegistry_container,
@@ -92,7 +92,7 @@ export class AuthorizationAgent {
     }
 
     async findAgentRegistrationInPod(webId: string): Promise<AgentRegistration> {
-        const agentRegistrySet = await getContainterResource(
+        const agentRegistrySet = await getResource(
             AgentRegistryResource,
             this.session.fetch,
             this.AgentRegistry_container,
@@ -136,7 +136,7 @@ export class AuthorizationAgent {
     }
 
     get AllDataRegistrations(): Promise<DataRegistration[]> {
-        return getContainterResource(
+        return getResource(
             DataRegistryResource,
             this.session.fetch,
             this.DataRegistry_container,

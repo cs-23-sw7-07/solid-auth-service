@@ -18,7 +18,7 @@ const { Store, DataFactory } = N3;
 const { namedNode } = DataFactory;
 import { parseTurtle } from "../utils/turtle-parser";
 import { DataRegistryResource } from "../data-registry-container";
-import { getContainterResource, getResource } from "../rdf-document";
+import { getResource } from "../rdf-document";
 
 export class AuthorizationBuilder {
     private data_authorizations: Map<string, DataAuthorization> = new Map<
@@ -74,7 +74,7 @@ export class AuthorizationBuilder {
                 serializedDataset,
             );
 
-            const dataRegistry = await getContainterResource(
+            const dataRegistry = await getResource(
                 DataRegistryResource,
                 this.authorizationAgent.session.fetch,
                 this.authorizationAgent.DataRegistry_container,

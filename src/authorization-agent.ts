@@ -34,32 +34,32 @@ export class AuthorizationAgent {
         public session: Session,
     ) {
         const webId = session.info.webId!;
-        const agent_URI = webId2AuthorizationAgentUrl(webId);
-        this.authorizationAgent = new ApplicationAgent(agent_URI);
+        const agentUri = webId2AuthorizationAgentUrl(webId);
+        this.authorizationAgent = new ApplicationAgent(agentUri);
         this.socialAgent = new SocialAgent(webId);
     }
 
     async setRegistriesSetContainer() {
-        const profile_document: SocialAgentProfileDocument = await getResource(
+        const profileDocument: SocialAgentProfileDocument = await getResource(
             SocialAgentProfileDocument,
             this.session.fetch,
             this.socialAgent.webID,
         );
 
-        let registies_set: RegistrySetResource;
-        if (profile_document.hasRegistrySet()) {
-            registies_set = await profile_document.getRegistrySet(this.session.fetch);
+        let registiesSet: RegistrySetResource;
+        if (profileDocument.hasRegistrySet()) {
+            registiesSet = await profileDocument.getRegistrySet(this.session.fetch);
         } else {
-            registies_set = await createRegistriesSet(
+            registiesSet = await createRegistriesSet(
                 this.session.fetch,
                 this.pod,
-                profile_document,
+                profileDocument,
             );
         }
 
-        this.agentRegistryContainer = registies_set.HasAgentRegistry!;
-        this.authorizationRegistryContainer = registies_set.HasAuthorizationRegistry!;
-        this.dataRegistryContainer = registies_set.HasDataRegistry!;
+        this.agentRegistryContainer = registiesSet.HasAgentRegistry!;
+        this.authorizationRegistryContainer = registiesSet.HasAuthorizationRegistry!;
+        this.dataRegistryContainer = registiesSet.HasDataRegistry!;
     }
 
     generateId(uri: string) {
@@ -85,12 +85,12 @@ export class AuthorizationAgent {
         await builder.build(approval.agent, authBuilders);
         await builder.storeToPod();
 
-        const agent_registry = await getResource(
+        const agentRegistry = await getResource(
             AgentRegistryResource,
             this.session.fetch,
             this.agentRegistryContainer,
         );
-        await agent_registry.addRegistration(
+        await agentRegistry.addRegistration(
             this.session.fetch,
             approval.agent,
             builder.getAgentRegistration(),
@@ -103,28 +103,28 @@ export class AuthorizationAgent {
             this.session.fetch,
             this.agentRegistryContainer,
         );
-        const profile_document: ApplicationProfileDocument = await getResource(
+        const profileDocument: ApplicationProfileDocument = await getResource(
             ApplicationProfileDocument,
             this.session.fetch,
             webId,
         );
-        const type = profile_document.getTypeOfSubject();
-        const registration_type = getRegistrationTypes(type);
-        const registrations_iri: string[] | undefined =
-            agentRegistrySet.getObjectValuesFromPredicate(registration_type);
+        const type = profileDocument.getTypeOfSubject();
+        const registrationType = getRegistrationTypes(type);
+        const registrationsIri: string[] | undefined =
+            agentRegistrySet.getObjectValuesFromPredicate(registrationType);
 
-        if (!registrations_iri) {
+        if (!registrationsIri) {
             throw new NoApplicationRegistrationError(webId);
         }
 
         const factory = new RdfFactory();
-        const rdfs = registrations_iri.map(
+        const rdfs = registrationsIri.map(
             async (iri) => await factory.parse(this.session.fetch, iri),
         );
 
-        let agent_registration = [];
+        let agentRegistration = [];
         if (type == INTEROP + "Application") {
-            agent_registration = rdfs.map(async (rdf) =>
+            agentRegistration = rdfs.map(async (rdf) =>
                 ApplicationRegistration.makeApplicationRegistration(await rdf),
             );
         } else {
@@ -133,7 +133,7 @@ export class AuthorizationAgent {
             );
         }
 
-        const reg = await agent_registration.find(
+        const reg = await agentRegistration.find(
             async (reg) => (await reg).registeredAgent.webID == webId,
         );
         if (!reg) throw new NoApplicationRegistrationError(webId);
@@ -146,7 +146,7 @@ export class AuthorizationAgent {
             DataRegistryResource,
             this.session.fetch,
             this.dataRegistryContainer,
-        ).then((data_registry) => data_registry.getHasDataRegistrations(this.session.fetch));
+        ).then((dataRegistry) => dataRegistry.getHasDataRegistrations(this.session.fetch));
     }
 
     async getDataRegistrations(

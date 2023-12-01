@@ -51,9 +51,20 @@ It gives the authorization agent's profile document for the Social Agent. As an 
 what endpoint to call when it wants access to the Social Agent's Pod.
 
 ### HEAD http://localhost:3001/agents/<agent_id>?client_id=<client_id>
-With this request, the application with```<client_id>``` can get a link to its Application Registration.
+With this request, the application with```<client_id>``` can get a link to its Application Registration. This is specified in the Link header.
+
 Gives status code 400 if it has no Application Registration.
 
 ### POST http://localhost:3001/agents/<agent_id>/wants-access?client_id=<client_id>
 With this request, the application with```<client_id>``` will get access to the Social Agent's Pod.
-It requires that by derefecering
+It requires that by derefercing the ```<client_id>```, it should contain AccessNeedGroup and AccessNeed.
+
+### PUT http://localhost:3001/pods/<data_id>/<web_id>
+This is used when an application wants to insert a data instance.
+In the Link header, you have to specify the Data Registration it should contain in.
+
+### GET http://localhost:3001/pods/<data_iri>/<web_id>
+Gives the data instance with the IRI <data_iri> from the Social Agent <web_id>.
+
+### DELETE http://localhost:3001/pods/<data_iri>/<web_id>
+Deletes the data instance with the IRI <data_iri> from the Social Agent <web_id>.

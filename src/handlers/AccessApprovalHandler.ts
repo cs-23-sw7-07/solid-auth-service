@@ -1,15 +1,12 @@
-import { Agent, GrantScope } from "solid-interoperability";
+import { Agent } from "solid-interoperability";
 import { IAccessApproval } from "../interfaces/IAccessApproval";
 import { Approval } from "../application/approval";
 import { AccessNeedGroup } from "../application/access-need-group";
 import { DataAccessScope } from "../application/data-access-scope";
 
 export class AccessApprovalHandler implements IAccessApproval {
-    getAccessScope(): GrantScope {
-        return GrantScope.All;
-    }
     private isAccessGranted: boolean = true;
-
+    
     requestAccessApproval(): boolean {
         return this.isAccessGranted;
     }

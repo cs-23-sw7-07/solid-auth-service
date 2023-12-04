@@ -3,22 +3,22 @@ import { randomUUID } from "crypto";
 import { INTEROP } from "./namespace";
 import {
     AgentRegistration,
+    AgentRegistryResource,
     ApplicationAgent,
+    ApplicationProfileDocument,
     ApplicationRegistration,
     DataRegistration,
-    NotImplementedYet,
-    RdfFactory,
+    DataRegistryResource,
+    RegistrySetResource,
     SocialAgent,
+    SocialAgentProfileDocument,
+    SocialAgentRegistration,
+    createRegistriesSet,
+    getResource,
 } from "solid-interoperability";
 import { Approval } from "./application/approval";
 import { AuthorizationBuilder } from "./builder/authorization-builder";
 import { AgentRegistrationBuilder } from "./builder/application-registration-builder";
-import { getResource } from "./rdf-document";
-import { SocialAgentProfileDocument } from "./profile-documents/social-agent-profile-document";
-import { DataRegistryResource } from "./data-registry-container";
-import { RegistrySetResource, createRegistriesSet } from "./registry-set-container";
-import { AgentRegistryResource } from "./agent-registry-container";
-import { ApplicationProfileDocument } from "./profile-documents/application-profile-document";
 import { webId2AuthorizationAgentUrl } from "./utils/uri-convert";
 import { getPodUrlAll } from "@inrupt/solid-client";
 import { NoApplicationRegistrationError } from "./errors/application-registration-not-exist";
@@ -51,7 +51,7 @@ export class AuthorizationAgent {
 
         let registiesSet: RegistrySetResource;
         if (profileDocument.HasRegistrySet) {
-            registiesSet = await profileDocument.getRegistrySet(this.session.fetch);
+            registiesSet = await profileDocument.getRegistrySet();
         } else {
             registiesSet = await createRegistriesSet(
                 this.session.fetch,
@@ -81,7 +81,7 @@ export class AuthorizationAgent {
         }
 
         for (const authorizationBuilder of authBuilders) {
-            await authorizationBuilder.storeToPod();
+            await authorizationBuilder.updateParentContainerMetaData();
         }
 
         const builder = new AgentRegistrationBuilder(this);
@@ -94,8 +94,6 @@ export class AuthorizationAgent {
             this.agentRegistryContainer,
         );
         await agentRegistry.addRegistration(
-            this.session.fetch,
-            approval.agent,
             builder.getAgentRegistration(),
         );
     }
@@ -111,33 +109,26 @@ export class AuthorizationAgent {
             this.session.fetch,
             webId,
         );
+        
         const type = profileDocument.getTypeOfSubject();
-        const registrationType = getRegistrationTypes(type);
+        const isApp = isApplicationAgent(type);
+        const registrationType = isApp
+            ? INTEROP + "hasApplicationRegistration"
+            : INTEROP + "hasSocialAgentRegistration";
         const registrationsIri: string[] | undefined =
-            agentRegistrySet.getObjectValuesFromPredicate(registrationType);
-
+            agentRegistrySet.getObjectValuesFromPredicate(registrationType); // TODO: Should only take type of agent as parameter, not predicate
+            
         if (!registrationsIri) {
             throw new NoApplicationRegistrationError(webId);
         }
 
-        const factory = new RdfFactory();
-        const rdfs = registrationsIri.map(
-            async (iri) => await factory.parse(this.session.fetch, iri),
-        );
-
-        let agentRegistration = [];
-        if (type == INTEROP + "Application") {
-            agentRegistration = rdfs.map(async (rdf) =>
-                ApplicationRegistration.makeApplicationRegistration(await rdf),
-            );
-        } else {
-            throw new NotImplementedYet(
-                "Have not implmented a makeSocialAgentRegistration method on SocialAgentRegistration",
-            );
-        }
+        let agentRegistration = registrationsIri.map(async (iri) => {
+            let ActualAgentType = isApp ? ApplicationRegistration : SocialAgentRegistration;
+            return await getResource(ActualAgentType, this.session.fetch, iri)
+        })
 
         const reg = await agentRegistration.find(
-            async (reg) => (await reg).registeredAgent.webID == webId,
+            async (reg) => (await reg).RegisteredAgent.webID == webId,
         );
         if (!reg) throw new NoApplicationRegistrationError(webId);
 
@@ -149,17 +140,17 @@ export class AuthorizationAgent {
             DataRegistryResource,
             this.session.fetch,
             this.dataRegistryContainer,
-        ).then((dataRegistry) => dataRegistry.getHasDataRegistrations(this.session.fetch));
+        ).then((dataRegistry) => dataRegistry.getHasDataRegistrations());
     }
 
     async getDataRegistrations(
         shapeTree: string,
         dataOwner?: SocialAgent,
     ): Promise<DataRegistration[]> {
-        const pShapeTree = (reg: DataRegistration) => reg.registeredShapeTree == shapeTree;
+        const pShapeTree = (reg: DataRegistration) => reg.RegisteredShapeTree == shapeTree;
 
         const pDataOwner = (dataReg: DataRegistration) => {
-            if (dataOwner) return dataReg.registeredBy == dataOwner;
+            if (dataOwner) return dataReg.RegisteredBy == dataOwner;
 
             return true;
         };
@@ -168,8 +159,6 @@ export class AuthorizationAgent {
     }
 }
 
-function getRegistrationTypes(type: string | undefined): string {
-    return type === INTEROP + "Application"
-        ? INTEROP + "hasApplicationRegistration"
-        : INTEROP + "hasSocialAgentRegistration";
+function isApplicationAgent(types: string[] | undefined): boolean {
+    return types!.includes(INTEROP + "Application"); // Should not use ! here but do error handling
 }

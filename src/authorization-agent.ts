@@ -9,6 +9,7 @@ import {
     NotImplementedYet,
     RdfFactory,
     SocialAgent,
+    ProfileDocument
 } from "solid-interoperability";
 import { Approval } from "./application/approval";
 import { AuthorizationBuilder } from "./builder/authorization-builder";
@@ -38,8 +39,8 @@ export class AuthorizationAgent {
     static async new(session: Session): Promise<AuthorizationAgent> {
         const webId = session.info.webId!;
         const agentUri = webId2AuthorizationAgentUrl(webId);
-        const pods = await getPodUrlAll(webId, { fetch: session.fetch });
-        return new AuthorizationAgent(session, new SocialAgent(webId), new ApplicationAgent(agentUri), pods[0])
+        const pod = (await ProfileDocument.fetch(new URL(webId))).Pod;
+        return new AuthorizationAgent(session, new SocialAgent(webId), new ApplicationAgent(agentUri), pod.toString())
     }
 
     async setRegistriesSetContainer() {

@@ -77,7 +77,7 @@ app.use('/agents', authorizationRouter);
 
 authorizationRouter.get("/new", async (req, res) => {
     // 1. Create a new Session
-    const session = new Session({ storage: new RedisSolidStorage() });
+    const session = new Session();
     req.session!.sessionId = session.info.sessionId;
     const redirectToSolidIdentityProvider = (url: string) => {
         // Since we use Express in this example, we can call `res.redirect` to send the user to the
@@ -107,10 +107,10 @@ authorizationRouter.get("/new", async (req, res) => {
  */
 async function getAuthorizationAgentsFromCache() {
     try {
-        const sessionIds = await getSessionIdFromStorageAll(new RedisSolidStorage());
+        const sessionIds = await getSessionIdFromStorageAll();
 
         for (const id of sessionIds) {
-            const session = await getSessionFromStorage(id, new RedisSolidStorage());
+            const session = await getSessionFromStorage(id);
 
             if (!session)
                 continue;
@@ -132,10 +132,10 @@ async function getAuthorizationAgentsFromCache() {
  */
 async function removePreviousSession(webId: string, expectSessionId: string) {
     try {
-        const sessionIds = await getSessionIdFromStorageAll(new RedisSolidStorage());
+        const sessionIds = await getSessionIdFromStorageAll();
 
         for (const id of sessionIds.filter(id => id !== expectSessionId)) {
-            const session = await getSessionFromStorage(id, new RedisSolidStorage());
+            const session = await getSessionFromStorage(id, );
 
             if (session && session.info.webId === webId)
                 session.logout();
@@ -152,7 +152,7 @@ authorizationRouter.get("/new/callback", async (req, res) => {
         //    it means that the login has been initiated and can be completed. In
         //    particular, initiating the login stores the session in storage,
         //    which means it can be retrieved as follows.
-        const session = await getSessionFromStorage(req.session!.sessionId, new RedisSolidStorage());
+        const session = await getSessionFromStorage(req.session!.sessionId);
 
         if (!session)
             return res.sendStatus(403).send();
@@ -273,31 +273,37 @@ app.use('/pods', podsRouter);
 /*
 Endpoint for inserting data into the Pod
 */
-podsRouter.put("/:dataId/:webId", async (req, res) => {
+podsRouter.put("/:dataId", async (req, res) => {
+
+    console.log("Putting")
     const dataId: string = req.params.dataId;
-    const authorization: string = req.headers["Authorization"] as string;
     const link: string = req.headers["Link"] as string;
-    const authorizationAgent: AuthorizationAgent | undefined = cache.get(req.params.webId);
 
-    if (!authorization || !link)
-        return res.status(400).json({ error: "Both Authorization and Link headers are required." });
-
-    if (!authorizationAgent)
-        return res.status(401).json({ error: "Invalid or expired authorization agent." });
+    if (!link)
+        return res.status(401).json("Link headers are required.");
 
     try {
         const linkValue = Link.parse(link);
+        const rel = "http://xmlns.com/foaf/0.1/PersonalProfileDocument"
+        const refs = linkValue.rel(rel)
+
+        if (refs.length !== 1)
+            res.status(400).json({statusText: "Exactly one WebId is required in the Link Header."})
+        const authorizationAgent = cache.get(refs[0].uri);
+
+        if (!authorizationAgent)
+            return res.status(401).json({ statusText: "Invalid or expired authorization agent." });
 
         if (linkValue.refs.length === 1) {
             const dataInstanceIRI: string = linkValue.refs[0].uri + '/' + dataId;
             await insertTurtleResource(authorizationAgent.session.fetch, dataInstanceIRI, req.body);
             res.status(200).json({ success: true });
         } else {
-            res.status(400).json({ error: "Only one Link header is allowed." });
+            res.status(400).json({ statusText: "Only one Link header is allowed." });
         }
     } catch (error) {
         console.error("Error processing the request:", error);
-        res.status(500).json({ error: "Internal Server Error" });
+        res.status(500).json({ statusText: "Internal Server Error" });
     }
 });
 

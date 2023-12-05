@@ -7,7 +7,7 @@
     "build": "tsc --project tsconfig.json",
     "dev": "npm run build && npm start",
     "redis-start": "docker start authorization-agent || docker run -d --name authorization-agent -p 6379:6379 redis/redis-stack-server:latest",
-    "redis-stop": "docker start authorization-agent",
+    "redis-stop": "docker stop authorization-agent",
     "redis-remove": "docker rm -f authorization-agent",
     "redis-remove-image": "docker rmi -f redis/redis-stack-server:latest",
     "redis-cli": "docker exec -it authorization-agent redis-cli",

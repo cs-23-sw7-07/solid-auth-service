@@ -102,41 +102,68 @@ export class AuthorizationAgent {
     }
 
     async findAgentRegistrationInPod(webId: string): Promise<AgentRegistration> {
-        const agentRegistrySet = await getResource(
-            AgentRegistryResource,
-            this.session.fetch,
-            this.agentRegistryContainer,
-        );
-        const profileDocument: ApplicationProfileDocument = await getResource(
-            ApplicationProfileDocument,
-            this.session.fetch,
-            webId,
-        );
+        let agentRegistrySet
+        try{
+            agentRegistrySet = await getResource(
+                AgentRegistryResource,
+                this.session.fetch,
+                this.agentRegistryContainer,
+            );
+        } catch (e) {
+            throw new Error(`Could not get Agent Registry Set:\n${e}`)
+        }
+        let profileDocument: ApplicationProfileDocument
+        try {
+            profileDocument = await getResource(
+                ApplicationProfileDocument,
+                this.session.fetch,
+                webId,
+            );
+        } catch (e) {
+            throw new Error(`Could not get Application Profile Document for WebId:${webId}\n${e}`)
+        }
+
+
         const type = profileDocument.getTypeOfSubject();
-        const registrationType = getRegistrationTypes(type);
-        const registrationsIri: string[] | undefined =
-            agentRegistrySet.getObjectValuesFromPredicate(registrationType);
+
+        let registrationsIri: string[] | undefined
+        try {
+            const registrationType = getRegistrationTypes(type);
+            registrationsIri = agentRegistrySet.getObjectValuesFromPredicate(registrationType);
+        } catch (e) {
+            throw new Error(`Error getting registrations IRI:\n${e}`)
+        }
 
         if (!registrationsIri) {
+            console.error("Registrations IRIs were not found.")
             throw new NoApplicationRegistrationError(webId);
         }
 
-        const factory = new RdfFactory();
-        const rdfs = registrationsIri.map(
-            async (iri) => await factory.parse(this.session.fetch, iri),
-        );
-
-        let agentRegistration = [];
-        if (type == INTEROP + "Application") {
-            agentRegistration = rdfs.map(async (rdf) =>
-                ApplicationRegistration.makeApplicationRegistration(await rdf),
-            );
-        } else {
-            throw new NotImplementedYet(
-                "Have not implmented a makeSocialAgentRegistration method on SocialAgentRegistration",
-            );
+        let rdfs = []
+        try {
+            const factory = new RdfFactory();
+            for (const iri of registrationsIri){
+                rdfs.push(await factory.parse(this.session.fetch, iri))
+            }
+        } catch (e){
+            throw new Error(`Could not fetch and parse Registration IRIs\n${e}`)
         }
 
+        let agentRegistration = [];
+        try {
+            if (type == INTEROP + "Application") {
+                agentRegistration = rdfs.map((rdf) =>
+                    ApplicationRegistration.makeApplicationRegistration(rdf),
+                );
+            } else {
+                throw new NotImplementedYet(
+                    "Have not implmented a makeSocialAgentRegistration method on SocialAgentRegistration",
+                );
+            }
+        } catch (e) {
+            console.error("No Agent Registrations found.")
+            throw new NoApplicationRegistrationError(webId)
+        }
         const reg = await agentRegistration.find(
             async (reg) => (await reg).registeredAgent.webID == webId,
         );

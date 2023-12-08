@@ -60,17 +60,16 @@ export async function updateContainerResource(
     dataset: DatasetCore,
 ) {
     const body = await insertPatch(dataset);
-    await fetch(containerIri + ".meta", {
+    const res = await fetch(containerIri + ".meta", {
         method: "PATCH",
         body: body,
         headers: {
             "Content-Type": "application/sparql-update",
         },
-    }).then((res) => {
-        if (!res.ok) {
-            throw new Error(`failed to patch ${containerIri}`);
-        }
     });
+    if (!res.ok) {
+        throw new Error(`failed to patch ${containerIri}.\nStatus code: ${res.status}\n${await res.text()}`);
+    }
 }
 
 export async function deleteContainerResource(fetch: Fetch, containerIRI: string): Promise<void> {
@@ -86,14 +85,14 @@ export async function deleteContainerResource(fetch: Fetch, containerIRI: string
 export function readResource(fetch: Fetch, url: string): Promise<string> {
     return fetch(url).then((res) => {
         if (res.ok) return res.text();
-        throw new ReadResourceError("Couldn't read the resource at " + url);
+        throw new ReadResourceError("Couldn't fetch the resource at " + url);
     });
 }
 
-export function readParseResource(fetch: Fetch, url: string): Promise<ParserResult> {
-    return fetch(url)
-        .then((res) => res.text())
-        .then((res) => parseTurtle(res, url));
+export async function readParseResource(fetch: Fetch, url: string): Promise<ParserResult> {
+    const res = await fetch(url, {headers: {Accept: "text/turtle"}});
+    const text = await res.text();
+    return await parseTurtle(text, url);
 }
 
 class InsertResourceError extends Error {

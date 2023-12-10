@@ -1,5 +1,4 @@
-import { DataAuthorization, GrantScope } from "solid-interoperability";
-import { AccessNeed } from "./access-need";
+import { AccessNeed, DataAuthorization, GrantScope } from "solid-interoperability";
 import { AuthorizationBuilder } from "../builder/authorization-builder";
 
 export abstract class DataAccessScope {
@@ -14,16 +13,14 @@ export class DataAccessScopeAll extends DataAccessScope {
     }
 
     async toDataAuthorization(builder: AuthorizationBuilder): Promise<DataAuthorization> {
-        return new DataAuthorization(
+        return DataAuthorization.new(
             builder.generateId(),
+            builder.authorizationAgent.session.fetch,
             builder.authorizationAgent.socialAgent,
             this.accessNeed.RegisteredShapeTree!,
+            this.accessNeed,
             this.accessNeed.AccessModes,
             GrantScope.All,
-            this.accessNeed.uri,
-            undefined,
-            undefined,
-            undefined,
             this.accessNeed.CreatorAccessModes,
         );
     }

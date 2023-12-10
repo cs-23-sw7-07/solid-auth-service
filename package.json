@@ -2,6 +2,12 @@
   "name": "solid-auth-service",
   "version": "0.0.1",
   "private": true,
+  "config": {
+    "community-solid-server": {
+      "port": 3000,
+      "loggingLevel": "info"
+    }
+  },
   "scripts": {
     "start": "node --stack-trace-limit=40 dist/app.js",
     "build": "tsc --project tsconfig.json",
@@ -14,6 +20,7 @@
     "test": "jest",
     "check": "prettier --check src && eslint src test",
     "fmt": "prettier --write src && eslint src test",
+    "dev:pod": "community-solid-server -c @css:config/file.json -f solid-server/",
     "solid-server": "npx @solid/community-server -c @css:config/file.json -f solid-server/"
   },
   "dependencies": {

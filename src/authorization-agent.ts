@@ -26,16 +26,26 @@ export class AuthorizationAgent {
         public authorizationAgent: ApplicationAgent,
         public pod: string,
         public registiesSet: RegistrySetResource,
-    ) { }
+    ) {}
 
     static async new(session: Session): Promise<AuthorizationAgent> {
         const webId = session.info.webId!;
         const agentUri = webId2AuthorizationAgentUrl(webId);
         const pods = await getPodUrlAll(webId, { fetch: session.fetch });
-        return new AuthorizationAgent(session, new SocialAgent(webId), new ApplicationAgent(agentUri), pods[0], await AuthorizationAgent.setRegistriesSetContainer(webId, pods[0], session.fetch));
+        return new AuthorizationAgent(
+            session,
+            new SocialAgent(webId),
+            new ApplicationAgent(agentUri),
+            pods[0],
+            await AuthorizationAgent.setRegistriesSetContainer(webId, pods[0], session.fetch),
+        );
     }
 
-    private static async setRegistriesSetContainer(webId: string, pod: string, fetch: Fetch): Promise<RegistrySetResource> {
+    private static async setRegistriesSetContainer(
+        webId: string,
+        pod: string,
+        fetch: Fetch,
+    ): Promise<RegistrySetResource> {
         const profile: SocialAgentProfileDocument = await getResource(
             SocialAgentProfileDocument,
             fetch,
@@ -45,12 +55,9 @@ export class AuthorizationAgent {
         if (profile.HasRegistrySet) {
             return profile.getRegistrySet();
         } else {
-            return RegistrySetResource.createRegistriesSet(
-                fetch,
-                pod,
-                profile,
-                {randomID: () => randomUUID()}
-            );
+            return RegistrySetResource.createRegistriesSet(fetch, pod, profile, {
+                randomID: () => randomUUID(),
+            });
         }
     }
 
@@ -59,7 +66,12 @@ export class AuthorizationAgent {
     }
 
     async insertNewAgentToPod(approval: Approval) {
-        const authBuilder = new AuthorizationBuilder(this, approval.agent, await this.registiesSet.getHasAuthorizationRegistry(), await this.registiesSet.getHasDataRegistry());
+        const authBuilder = new AuthorizationBuilder(
+            this,
+            approval.agent,
+            await this.registiesSet.getHasAuthorizationRegistry(),
+            await this.registiesSet.getHasDataRegistry(),
+        );
         const authResults = await authBuilder.build(approval);
 
         const builder = new AgentRegistrationBuilder(this);
@@ -74,21 +86,23 @@ export class AuthorizationAgent {
             this.session.fetch,
             webId,
         );
-        
+
         const isApp = isApplicationAgent(profileDocument);
 
-        let agentRegistration = isApp ? await agentRegistrySet.getHasApplicationRegistration() : await agentRegistrySet.getHasSocialAgentRegistration();
+        const agentRegistration = isApp
+            ? await agentRegistrySet.getHasApplicationRegistration()
+            : await agentRegistrySet.getHasSocialAgentRegistration();
 
-        const reg = agentRegistration.find(
-            (reg) => reg.RegisteredAgent.getWebID() == webId,
-        );
+        const reg = agentRegistration.find((reg) => reg.RegisteredAgent.getWebID() == webId);
         if (!reg) throw new NoApplicationRegistrationError(webId);
 
         return reg;
     }
 
     get AllDataRegistrations(): Promise<DataRegistration[]> {
-        return this.registiesSet.getHasDataRegistry().then((dataRegistry) => dataRegistry.getHasDataRegistrations());
+        return this.registiesSet
+            .getHasDataRegistry()
+            .then((dataRegistry) => dataRegistry.getHasDataRegistrations());
     }
 
     async getDataRegistrations(

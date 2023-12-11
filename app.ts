@@ -243,6 +243,9 @@ authorizationRouter.post("/:webId/wants-access", async (req, res) => {
 
     try {
         const authorizationAgent: AuthorizationAgent = cache.get(authorizationAgentUrl2webId(req.params.webId))!;
+        if (!authorizationAgent)
+            return res.status(401).json({ error: "Invalid or expired authorization agent." });
+        
         const accessApprovalHandler = new AccessApprovalHandler();
         const approved: boolean = accessApprovalHandler.requestAccessApproval();
         const fetch = authorizationAgent.session.fetch;

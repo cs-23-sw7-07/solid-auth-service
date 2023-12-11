@@ -10,16 +10,28 @@ import {
     IDataGrantBuilder,
     SocialAgent,
 } from "solid-interoperability";
-import { AuthorizationBuilder, AuthorizationResult } from "./authorization-builder";
+import { AuthorizationResult } from "./authorization-builder";
 
 export class AgentRegistrationBuilder {
     constructor(private authorizationAgent: AuthorizationAgent) {}
 
-    async build(registeredAgent: Agent, authResult: AuthorizationResult[]): Promise<ApplicationRegistration> {
+    async build(
+        registeredAgent: Agent,
+        authResult: AuthorizationResult[],
+    ): Promise<ApplicationRegistration> {
         const agentRegistry = await this.authorizationAgent.registiesSet.getHasAgentRegistry();
         const id = agentRegistry.uri + randomUUID() + "/";
 
-        let accessGrants: AccessGrant[] = [];
+        const reg = await ApplicationRegistration.new(
+            id,
+            this.authorizationAgent.session.fetch,
+            this.authorizationAgent.socialAgent,
+            this.authorizationAgent.authorizationAgent,
+            registeredAgent,
+            [],
+        );
+
+        const accessGrants: AccessGrant[] = [];
         for (const auth of authResult) {
             const grantBuilder = new GrantNeedGroupBuilder(this.authorizationAgent, id);
             const dataGrants = grantBuilder.createDataGrants(auth.dataAuthorizations);
@@ -30,17 +42,10 @@ export class AgentRegistrationBuilder {
             accessGrants.push(await accessGrant);
         }
 
-        const reg = await ApplicationRegistration.new(
-            id,
-            this.authorizationAgent.session.fetch,
-            this.authorizationAgent.socialAgent,
-            this.authorizationAgent.authorizationAgent,
-            registeredAgent,
-            accessGrants,
-        );
-        
+        reg.AddAccessGrants(accessGrants);
+
         await agentRegistry.addRegistration(reg);
-        
+
         return reg;
     }
 }

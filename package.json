@@ -12,16 +12,15 @@
     "start": "node --stack-trace-limit=40 dist/app.js",
     "build": "tsc --project tsconfig.json",
     "dev": "npm run build && npm start",
-    "redis-start": "docker start authorization-agent || docker run -d --name authorization-agent -p 6379:6379 redis/redis-stack-server:latest",
-    "redis-stop": "docker stop authorization-agent",
-    "redis-remove": "docker rm -f authorization-agent",
-    "redis-remove-image": "docker rmi -f redis/redis-stack-server:latest",
-    "redis-cli": "docker exec -it authorization-agent redis-cli",
+    "redis:start": "docker start authorization-agent || docker run -d --name authorization-agent -p 6379:6379 redis/redis-stack-server:latest",
+    "redis:stop": "docker stop authorization-agent",
+    "redis:remove": "docker rm -f authorization-agent",
+    "redis:remove-image": "docker rmi -f redis/redis-stack-server:latest",
+    "redis:cli": "docker exec -it authorization-agent redis-cli",
     "test": "jest",
-    "check": "prettier --check src && eslint src test",
-    "fmt": "prettier --write src && eslint src test",
-    "dev:pod": "community-solid-server -c @css:config/file.json -f solid-server/",
-    "solid-server": "npx @solid/community-server -c @css:config/file.json -f solid-server/"
+    "check": "prettier --check src && eslint src",
+    "fmt": "prettier --write src && eslint src",
+    "dev:pod": "community-solid-server -c @css:config/file.json -f solid-server/"
   },
   "dependencies": {
     "@inrupt/solid-client": "^1.30.2",
@@ -48,6 +47,7 @@
     "typescript": "^5.2.2"
   },
   "devDependencies": {
+    "@solid/community-server": "^7.0.2",
     "@types/cookie-parser": "^1.4.6",
     "@types/cookie-session": "^2.0.47",
     "@types/debug": "^4.1.11",

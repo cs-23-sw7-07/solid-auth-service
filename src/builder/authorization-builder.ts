@@ -15,7 +15,7 @@ export class AuthorizationResult {
     constructor(
         public accessAuthorization: AccessAuthorization,
         public dataAuthorizations: DataAuthorization[],
-    ) { }
+    ) {}
 }
 
 export class AuthorizationBuilder {
@@ -29,12 +29,10 @@ export class AuthorizationBuilder {
         public grantee: Agent,
         private authorizationRegistry: AuthorizationRegistryResource,
         private dataRegistry: DataRegistryResource,
-    ) { }
+    ) {}
 
     generateId(): string {
-        return this.authorizationAgent.generateId(
-            this.authorizationRegistry.uri,
-        );
+        return this.authorizationAgent.generateId(this.authorizationRegistry.uri);
     }
     async build(approval: Approval): Promise<AuthorizationResult[]> {
         const result: AuthorizationResult[] = [];
@@ -56,15 +54,14 @@ export class AuthorizationBuilder {
             if (!exists) {
                 const fetch = this.authorizationAgent.session.fetch;
                 const dataReg = DataRegistration.new(
-                    this.authorizationAgent.generateId(this.dataRegistry.uri) +
-                    "/",
+                    this.authorizationAgent.generateId(this.dataRegistry.uri) + "/",
                     fetch,
                     this.authorizationAgent.socialAgent,
                     this.authorizationAgent.authorizationAgent,
                     new Date(),
                     new Date(),
                     shapeTree,
-                )
+                );
 
                 await this.dataRegistry.addHasDataRegistration(await dataReg);
             }
@@ -80,7 +77,8 @@ export class AuthorizationBuilder {
     }
 
     createAccessAuthorization(accessNeedGroup: AccessNeedGroup): Promise<AccessAuthorization> {
-        return AccessAuthorization.new( // TODO: Reduce input parameters, e.g. this.generateId() is trivial and can be done in the fucntion.
+        return AccessAuthorization.new(
+            // TODO: Reduce input parameters, e.g. this.generateId() is trivial and can be done in the fucntion.
             this.generateId(),
             this.authorizationAgent.session.fetch,
             this.authorizationAgent.socialAgent,

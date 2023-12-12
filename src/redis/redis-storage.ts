@@ -13,7 +13,9 @@ export class RedisSolidStorage implements IStorage {
         try {
             const result = await this.client.del(key).then();
             if (result > 0) return;
-        } catch (e) {}
+        } catch (e) {
+            console.log("Could not delete key: " + key);
+        }
     }
 
     async get(key: string): Promise<string | undefined> {
@@ -29,6 +31,8 @@ export class RedisSolidStorage implements IStorage {
         try {
             const result = await this.client.set(key, value);
             if (result === "OK") return;
-        } catch (e) {}
+        } catch (e) {
+            console.log("Could not set key: " + key + " and value: " + value);
+        }
     }
 }

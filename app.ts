@@ -9,21 +9,26 @@ import { config } from "dotenv";
 import * as fs from "fs";
 import * as https from "https";
 import { AuthorizationAgent } from "./src/authorization-agent";
-import { SocialAgentProfileDocument } from "./src/profile-documents/social-agent-profile-document";
 import { authorizationAgentUrl2webId, webId2AuthorizationAgentUrl } from "./src/utils/uri-convert";
 import { AccessApprovalHandler } from "./src/handlers/AccessApprovalHandler";
-import { ApplicationRegistration } from "solid-interoperability/src/data-management/data-model/agent-registration/application-registration"
-import { ApplicationAgent, serializeTurtle } from "solid-interoperability";
-import { deleteContainerResource, insertTurtleResource, readResource } from "./src/utils/modify-pod";
-import { ApplicationProfileDocument } from "./src/profile-documents/application-profile-document";
+import {
+    AccessNeedGroup,
+    ApplicationAgent,
+    ApplicationProfileDocument, ApplicationRegistration,
+    deleteContainerResource,
+    getResource,
+    insertTurtleResource,
+    readResource,
+    serializeTurtle,
+    SocialAgentProfileDocument
+} from "solid-interoperability";
 import { DataAccessScope, DataAccessScopeAll } from "./src/application/data-access-scope";
-import { AccessNeedGroup } from "./src/application/access-need-group";
 import Link from "http-link-header";
 import path from "path";
 import { RedisSolidStorage } from "./src/redis/redis-storage";
-import { getResource } from "./src/rdf-document";
 import { Store, DataFactory } from "n3";
 import { INTEROP, TYPE_A } from "./src/namespace";
+import { Approval } from "./src/application/approval";
 
 const { namedNode } = DataFactory
 
@@ -116,9 +121,8 @@ async function getAuthorizationAgentsFromCache() {
                 continue;
 
             const webId = session.info.webId!;
-            const autho = await AuthorizationAgent.new(session)
-            await autho.setRegistriesSetContainer();
-            cache.set(webId, autho);
+            const authorizationAgent = await AuthorizationAgent.new(session)
+            cache.set(webId, authorizationAgent);
         }
     } catch (error) {
         console.error("Error in getAuthorizationAgentsFromCache:", error);
@@ -126,7 +130,7 @@ async function getAuthorizationAgentsFromCache() {
 }
 
 /**
- * Used to removed the previous session
+ * Used to remove the previous session
  * @param webId Id for the Application
  * @param expectSessionId The session id
  */
@@ -138,7 +142,7 @@ async function removePreviousSession(webId: string, expectSessionId: string) {
             const session = await getSessionFromStorage(id, );
 
             if (session && session.info.webId === webId)
-                session.logout();
+                await session.logout();
         }
     } catch (error) {
         console.error("Error in removePreviousSession:", error);
@@ -165,7 +169,7 @@ authorizationRouter.get("/new/callback", async (req, res) => {
         );
 
         const webId = session.info.webId!;
-        removePreviousSession(webId, req.session!.sessionId);
+        await removePreviousSession(webId, req.session!.sessionId);
 
         let authAgent = cache.get(webId);
 
@@ -174,16 +178,15 @@ authorizationRouter.get("/new/callback", async (req, res) => {
             const profileDocument: SocialAgentProfileDocument = await getResource(SocialAgentProfileDocument, session.fetch, webId);
 
             if (!profileDocument.hasAuthorizationAgent(agentURI))
-                await profileDocument.addHasAuthorizationAgent(agentURI, session.fetch);
+                await profileDocument.addHasAuthorizationAgent(agentURI);
 
             authAgent = await AuthorizationAgent.new(session);
             cache.set(webId, authAgent);
-            await authAgent.setRegistriesSetContainer();
         } else
             authAgent.session = session;
 
         if (session!.info.isLoggedIn)
-            return res.send(`<p>Logged in with the WebID ${webId}. <a href="localhost:3001/agents/new"></p>`);
+            return res.send(`<p>Logged in with the WebID: ${webId}. <a href="localhost:3001/agents/new"></p>`);
     } catch (error) {
         console.error("Error in authorizationRouter callback:", error);
         return res.status(500).send("Internal Server Error");
@@ -192,37 +195,63 @@ authorizationRouter.get("/new/callback", async (req, res) => {
 
 
 /*
-The endpoint for requesting if a Application have access to the Pod.
+The endpoint for requesting if an Application has access to the Pod.
 */
 authorizationRouter.get("/:webId", async (req, res) => {
-    const authorizationAgent: AuthorizationAgent = cache.get(authorizationAgentUrl2webId(req.params.webId))!
-    if (!authorizationAgent) {
-        return res.sendStatus(400);
+    console.log("Getting Auth agent")
+    let authorizationAgent: AuthorizationAgent
+    try {
+        const agent = cache.get(authorizationAgentUrl2webId(req.params.webId))
+        if (!agent) {
+            console.error("Authorization Agent could not be retrieved from cache.");
+            res.status(400).send("Authorization Agent could not be retrieved from cache.");
+            return
+        }
+        authorizationAgent = agent
+    } catch (e)
+    {
+        console.error(e)
+        res.status(500).send("Authorization Agent could not be retrieved from cache.")
+        return
     }
 
     if (req.method == "HEAD") {
         if (typeof(req.query.client_id) != "string") {
             res.status(400).send('Bad Request: Missing "client_id" parameter');
+            return
         }
-    
-        const authorizationAgent: AuthorizationAgent = cache.get(authorizationAgentUrl2webId(req.params.webId))!
-        const clientId: string = req.query.client_id as string
+
+        const clientId: string = decodeURIComponent(req.query.client_id as string)
+
+        if (clientId == undefined) {
+            console.error(`Client id was ${clientId}.`)
+            res.status(400).send("Wrong Client ID.")
+            return
+        }
+
+        let registration: ApplicationRegistration
+        try{
+            registration = await authorizationAgent.findAgentRegistrationInPod(clientId) as ApplicationRegistration
+        } catch (e) {
+            console.error(`Error getting Application Registration:\n${e}`)
+            res.status(500).send("Error getting Application Registration")
+            return
+        }
         try {
-            const registration: ApplicationRegistration = await authorizationAgent.findAgentRegistrationInPod(clientId) as ApplicationRegistration
-            console.log(registration.id)
-            res.header('Link', `<${clientId}>; anchor="${registration.id}"; rel="https://www.w3.org/ns/solid/interop#registeredAgent"`)
+            res.header('Link', `<${clientId}>; anchor="${registration.uri}"; rel="https://www.w3.org/ns/solid/interop#registeredAgent"`)
             return res.status(200).send();
         } catch (error) {
-            console.error(error)
-            return res.status(400).send("No registration found for this WebId: " + req.params.webId);
+            console.error(`Encountered error while responding to request:\n${error}`)
+            res.status(400).send("Could not respond to request. Client: " + req.params.webId);
+            return
         }
     }
     else {
-        const authorizationAgentId = `${protocol}://${address}:${port}/agents/${req.params.webId}/`
+        const authorizationAgentId = `${protocol}${address}:${port}/agents/${req.params.webId}`
         const subject = namedNode(authorizationAgentId)
         const store = new Store()
         store.addQuad(subject, namedNode(TYPE_A), namedNode(INTEROP + "AuthorizationAgent"))
-        store.addQuad(subject, namedNode(INTEROP + "hasAuthorizationRedirectEndpoint"), namedNode(authorizationAgentId + "wants-access"))
+        store.addQuad(subject, namedNode(INTEROP + "hasAuthorizationRedirectEndpoint"), namedNode(authorizationAgentId + "/wants-access"))
         res.setHeader('content-type', 'text/turtle');
         return res.status(200).send(await serializeTurtle(store, {}));
     }
@@ -234,37 +263,94 @@ The endpoint for the Application wanting access to a Pod
 authorizationRouter.post("/:webId/wants-access", async (req, res) => {
     if (typeof(req.query.client_id) != "string") {
         res.status(400).send('Bad Request: Missing "client_id" parameter');
+        return
     }
 
-    const clientId: string = req.query.client_id as string;
+    const clientId: string = decodeURIComponent(req.query.client_id as string);
+    console.log(`Trying to authorize: ${clientId}`)
+
+    let authorizationAgent: AuthorizationAgent;
+    try {
+        const agent = cache.get(authorizationAgentUrl2webId(req.params.webId))
+        if (agent == undefined){
+            res.status(403).send("Authorization Agent not found. Are you logged in?")
+            return
+        }
+        authorizationAgent = agent
+    } catch (e) {
+        console.error("Error getting Authorization Agent:\n" + e)
+        res.status(500).send("Could not get Authorization Agent.")
+        return
+    }
+
+    const accessApprovalHandler = new AccessApprovalHandler();
+
+    let approved;
+    try {
+        approved = accessApprovalHandler.requestAccessApproval()
+    } catch (e) {
+        console.error("Error getting Access Approval:\n" + e)
+        res.status(500).send("Could not approve request.")
+        return
+    }
+
+    if (!approved){
+        res.status(403).send('Your request got rejected');
+        return
+    }
+
+    const fetch = authorizationAgent.session.fetch;
+
+    let applicationProfileDocument: ApplicationProfileDocument;
+    try {
+        applicationProfileDocument = await getResource(ApplicationProfileDocument, fetch, clientId)
+    } catch (e) {
+        console.error("Error getting Application Profile Document:\n" + e)
+        res.status(500).send("Could not get Application Profile Document.")
+        return
+    }
+
+    let accesNeedGroups: AccessNeedGroup[];
+    try {
+        accesNeedGroups = await applicationProfileDocument.getHasAccessNeedGroup();
+        console.log(accesNeedGroups);
+    } catch (e) {
+        console.error("Error getting Access Need Groups:\n" + e)
+        res.status(500).send("Could not get Access Need Group from Application Profile Document.");
+        return
+    }
+    if (accesNeedGroups.length < 1)
+    {
+        res.status(500).send("No Access Need Groups registered.")
+        console.error("No Access Need Groups registered.")
+        return
+    }
+    const access = new Map<AccessNeedGroup, DataAccessScope[]>();
+
+    for (const accessNeedGroup of accesNeedGroups) {
+        const accessNeeds = await accessNeedGroup.getHasAccessNeed();
+        const dataAccessScopes = accessNeeds.map(accessNeed => new DataAccessScopeAll(accessNeed));
+        access.set(accessNeedGroup, dataAccessScopes);
+    }
+
+    let approvalStatus: Approval;
+    try{
+        approvalStatus =  accessApprovalHandler.getApprovalStatus(new ApplicationAgent(clientId), access)
+    } catch (e) {
+        console.error("Error getting Approval Status:\n" + e)
+        res.status(500).send("Could not get approval status.");
+        return
+    }
 
     try {
-        const authorizationAgent: AuthorizationAgent = cache.get(authorizationAgentUrl2webId(req.params.webId))!;
-        const accessApprovalHandler = new AccessApprovalHandler();
-        const approved: boolean = accessApprovalHandler.requestAccessApproval();
-        const fetch = authorizationAgent.session.fetch;
-
-        if (approved) {
-            const applicationProfileDocument = await getResource(ApplicationProfileDocument, fetch, clientId);
-            const accesNeedGroups = await applicationProfileDocument.gethasAccessNeedGroup(fetch);
-
-            const access = new Map<AccessNeedGroup, DataAccessScope[]>();
-
-            for (const accessNeedGroup of accesNeedGroups) {
-                const accessNeeds = await accessNeedGroup.getHasAccessNeed(fetch);
-                const dataAccessScopes = accessNeeds.map(accessNeed => new DataAccessScopeAll(accessNeed));
-                access.set(accessNeedGroup, dataAccessScopes);
-            }
-
-            await authorizationAgent.insertNewAgentToPod(accessApprovalHandler.getApprovalStatus(new ApplicationAgent(clientId), access));
-            res.status(202).send();
-        } else {
-            res.status(403).send('Your request got rejected');
-        }
-    } catch (error) {
-        console.error("Error in /:webId/wants-access:", error);
-        res.status(500).send("Internal Server Error");
+        await authorizationAgent.insertNewAgentToPod(approvalStatus)
+    } catch (e) {
+        console.error("Error inserting into pod:\n" + e)
+        res.status(500).send("Could not insert Agent into Pod.");
+        return
     }
+
+    res.status(202).send("Access was granted.")
 });
 
 const podsRouter = express.Router()
@@ -313,11 +399,10 @@ Endpoint for getting data from the Pod
 podsRouter.get("/:dataIRI/:webId", async (req, res) => {
     const dataIRI: string = req.params.dataIRI;
     const authorizationAgent: AuthorizationAgent | undefined = cache.get(req.params.webId);
+    if (!authorizationAgent)
+        return res.status(400).json({ error: "Bad request" });
 
     try {
-        if (!authorizationAgent)
-            throw new Error("Invalid or expired authorization agent.");
-
         const data = await readResource(authorizationAgent.session.fetch, dataIRI);
         res.status(200).send(data);
     } catch (error) {
@@ -360,7 +445,7 @@ podsRouter.delete("/:dataIRI/:webId", async (req, res) => {
 const projectronRouter = express.Router()
 app.use('/projectron', projectronRouter);
 
-projectronRouter.get("/", async (req, res) => {
+projectronRouter.get("/", async (_req, res) => {
     const options = {
         root: path.join(__dirname, "../")
     };

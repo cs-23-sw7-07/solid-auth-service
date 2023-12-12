@@ -1,69 +1,64 @@
 import { Session } from "@inrupt/solid-client-authn-node";
 import { randomUUID } from "crypto";
-import { INTEROP } from "./namespace";
 import {
     AgentRegistration,
     ApplicationAgent,
-    ApplicationRegistration,
     DataRegistration,
-    NotImplementedYet,
-    RdfFactory,
+    Fetch,
+    ProfileDocument,
+    RegistrySetResource,
     SocialAgent,
-    ProfileDocument
+    SocialAgentProfileDocument,
+    getResource,
+    isApplicationAgent,
+    getPod
 } from "solid-interoperability";
 import { Approval } from "./application/approval";
 import { AuthorizationBuilder } from "./builder/authorization-builder";
 import { AgentRegistrationBuilder } from "./builder/application-registration-builder";
-import { getResource } from "./rdf-document";
-import { SocialAgentProfileDocument } from "./profile-documents/social-agent-profile-document";
-import { DataRegistryResource } from "./data-registry-container";
-import { RegistrySetResource, createRegistriesSet } from "./registry-set-container";
-import { AgentRegistryResource } from "./agent-registry-container";
-import { ApplicationProfileDocument } from "./profile-documents/application-profile-document";
 import { webId2AuthorizationAgentUrl } from "./utils/uri-convert";
-import { getPodUrlAll } from "@inrupt/solid-client";
 import { NoApplicationRegistrationError } from "./errors/application-registration-not-exist";
 
 export class AuthorizationAgent {
-    agentRegistryContainer!: string;
-    authorizationRegistryContainer!: string;
-    dataRegistryContainer!: string;
-    
     private constructor(
         public session: Session,
         public socialAgent: SocialAgent,
         public authorizationAgent: ApplicationAgent,
-        public pod: string
-    ) { }
+        public pod: string,
+        public registiesSet: RegistrySetResource,
+    ) {}
 
     static async new(session: Session): Promise<AuthorizationAgent> {
         const webId = session.info.webId!;
         const agentUri = webId2AuthorizationAgentUrl(webId);
-        const pod = (await ProfileDocument.fetch(new URL(webId))).Pod;
-        return new AuthorizationAgent(session, new SocialAgent(webId), new ApplicationAgent(agentUri), pod.toString())
+        const pod = await getPod(webId, session.fetch);
+        return new AuthorizationAgent(
+            session,
+            new SocialAgent(webId),
+            new ApplicationAgent(agentUri),
+            pod.toString(),
+            await AuthorizationAgent.setRegistriesSetContainer(webId, pod.toString(), session.fetch),
+        );
     }
 
-    async setRegistriesSetContainer() {
-        const profileDocument: SocialAgentProfileDocument = await getResource(
+    private static async setRegistriesSetContainer(
+        webId: string,
+        pod: string,
+        fetch: Fetch,
+    ): Promise<RegistrySetResource> {
+        const profile: SocialAgentProfileDocument = await getResource(
             SocialAgentProfileDocument,
-            this.session.fetch,
-            this.socialAgent.webID,
+            fetch,
+            webId,
         );
 
-        let registiesSet: RegistrySetResource;
-        if (profileDocument.HasRegistrySet) {
-            registiesSet = await profileDocument.getRegistrySet(this.session.fetch);
+        if (profile.HasRegistrySet) {
+            return profile.getRegistrySet();
         } else {
-            registiesSet = await createRegistriesSet(
-                this.session.fetch,
-                this.pod,
-                profileDocument,
-            );
+            return RegistrySetResource.createRegistriesSet(fetch, pod, profile, {
+                randomID: () => randomUUID(),
+            });
         }
-
-        this.agentRegistryContainer = registiesSet.HasAgentRegistry!;
-        this.authorizationRegistryContainer = registiesSet.HasAuthorizationRegistry!;
-        this.dataRegistryContainer = registiesSet.HasDataRegistry!;
     }
 
     generateId(uri: string) {
@@ -71,106 +66,57 @@ export class AuthorizationAgent {
     }
 
     async insertNewAgentToPod(approval: Approval) {
-        let authBuilders: AuthorizationBuilder[] = [];
-        for (const [needGroup, scopes] of approval.access) {
-            const authBuilder = new AuthorizationBuilder(this, approval.agent);
-            for (const scope of scopes) {
-                await authBuilder.createDataAuthorization(scope);
-            }
-            await authBuilder.createAccessAuthorization(needGroup);
-            authBuilders.push(authBuilder);
-        }
-
-        for (const authorizationBuilder of authBuilders) {
-            await authorizationBuilder.storeToPod();
-        }
+        const authBuilder = new AuthorizationBuilder(
+            this,
+            approval.agent,
+            await this.registiesSet.getHasAuthorizationRegistry(),
+            await this.registiesSet.getHasDataRegistry(),
+        );
+        const authResults = await authBuilder.build(approval);
 
         const builder = new AgentRegistrationBuilder(this);
-        await builder.build(approval.agent, authBuilders);
-        await builder.storeToPod();
-
-        const agentRegistry = await getResource(
-            AgentRegistryResource,
-            this.session.fetch,
-            this.agentRegistryContainer,
-        );
-        await agentRegistry.addRegistration(
-            this.session.fetch,
-            approval.agent,
-            builder.getAgentRegistration(),
-        );
+        await builder.build(approval.agent, authResults);
     }
 
     async findAgentRegistrationInPod(webId: string): Promise<AgentRegistration> {
-        const agentRegistrySet = await getResource(
-            AgentRegistryResource,
-            this.session.fetch,
-            this.agentRegistryContainer,
-        );
-        const profileDocument: ApplicationProfileDocument = await getResource(
-            ApplicationProfileDocument,
+        const agentRegistrySet = await this.registiesSet.getHasAgentRegistry();
+
+        const profileDocument: ProfileDocument = await getResource(
+            ProfileDocument,
             this.session.fetch,
             webId,
         );
-        const type = profileDocument.getTypeOfSubject();
-        const registrationType = getRegistrationTypes(type);
-        const registrationsIri: string[] | undefined =
-            agentRegistrySet.getObjectValuesFromPredicate(registrationType);
 
-        if (!registrationsIri) {
-            throw new NoApplicationRegistrationError(webId);
-        }
+        const isApp = isApplicationAgent(profileDocument);
 
-        const factory = new RdfFactory();
-        const rdfs = registrationsIri.map(
-            async (iri) => await factory.parse(this.session.fetch, iri),
-        );
+        const agentRegistration = isApp
+            ? await agentRegistrySet.getHasApplicationRegistration()
+            : await agentRegistrySet.getHasSocialAgentRegistration();
 
-        let agentRegistration = [];
-        if (type == INTEROP + "Application") {
-            agentRegistration = rdfs.map(async (rdf) =>
-                ApplicationRegistration.makeApplicationRegistration(await rdf),
-            );
-        } else {
-            throw new NotImplementedYet(
-                "Have not implmented a makeSocialAgentRegistration method on SocialAgentRegistration",
-            );
-        }
-
-        const reg = await agentRegistration.find(
-            async (reg) => (await reg).registeredAgent.webID == webId,
-        );
+        const reg = agentRegistration.find((reg) => reg.RegisteredAgent.getWebID() == webId);
         if (!reg) throw new NoApplicationRegistrationError(webId);
 
         return reg;
     }
 
     get AllDataRegistrations(): Promise<DataRegistration[]> {
-        return getResource(
-            DataRegistryResource,
-            this.session.fetch,
-            this.dataRegistryContainer,
-        ).then((dataRegistry) => dataRegistry.getHasDataRegistrations(this.session.fetch));
+        return this.registiesSet
+            .getHasDataRegistry()
+            .then((dataRegistry) => dataRegistry.getHasDataRegistrations());
     }
 
     async getDataRegistrations(
         shapeTree: string,
         dataOwner?: SocialAgent,
     ): Promise<DataRegistration[]> {
-        const pShapeTree = (reg: DataRegistration) => reg.registeredShapeTree == shapeTree;
+        const pShapeTree = (reg: DataRegistration) => reg.RegisteredShapeTree == shapeTree;
 
         const pDataOwner = (dataReg: DataRegistration) => {
-            if (dataOwner) return dataReg.registeredBy == dataOwner;
+            if (dataOwner) return dataReg.RegisteredBy == dataOwner;
 
             return true;
         };
         const dataRegs = await this.AllDataRegistrations;
         return dataRegs.filter((reg) => pShapeTree(reg) && pDataOwner(reg));
     }
-}
-
-function getRegistrationTypes(type: string | undefined): string {
-    return type === INTEROP + "Application"
-        ? INTEROP + "hasApplicationRegistration"
-        : INTEROP + "hasSocialAgentRegistration";
 }

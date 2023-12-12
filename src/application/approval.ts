@@ -1,5 +1,4 @@
-import { Agent } from "solid-interoperability";
-import { AccessNeedGroup } from "./access-need-group";
+import { AccessNeedGroup, Agent } from "solid-interoperability";
 import { DataAccessScope } from "./data-access-scope";
 
 export class Approval {

@@ -93,7 +93,7 @@ export class AuthorizationAgent {
             ? await agentRegistrySet.getHasApplicationRegistration()
             : await agentRegistrySet.getHasSocialAgentRegistration();
 
-        const reg = agentRegistration.find((reg) => reg.RegisteredAgent.getWebID() == webId);
+        const reg = agentRegistration.find((reg) => reg.RegisteredAgent.WebID == webId);
         if (!reg) throw new NoApplicationRegistrationError(webId);
 
         return reg;

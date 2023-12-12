@@ -25,7 +25,6 @@ import {
 import { DataAccessScope, DataAccessScopeAll } from "./src/application/data-access-scope";
 import Link from "http-link-header";
 import path from "path";
-import { RedisSolidStorage } from "./src/redis/redis-storage";
 import { Store, DataFactory } from "n3";
 import { INTEROP, TYPE_A } from "./src/namespace";
 import { Approval } from "./src/application/approval";

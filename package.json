@@ -42,7 +42,7 @@
     "morgan": "~1.9.1",
     "n3": "^1.17.2",
     "prettier": "3.0.3",
-    "solid-interoperability": "file:../solid-interoperability",
+    "solid-interoperability": "https://github.com/cs-23-sw7-07/solid-interoperability.git",
     "ts-jest": "^29.1.1",
     "typescript": "^5.2.2"
   },

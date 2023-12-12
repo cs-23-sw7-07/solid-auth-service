@@ -11,12 +11,12 @@ import {
     SocialAgentProfileDocument,
     getResource,
     isApplicationAgent,
+    getPod
 } from "solid-interoperability";
 import { Approval } from "./application/approval";
 import { AuthorizationBuilder } from "./builder/authorization-builder";
 import { AgentRegistrationBuilder } from "./builder/application-registration-builder";
 import { webId2AuthorizationAgentUrl } from "./utils/uri-convert";
-import { getPodUrlAll } from "@inrupt/solid-client";
 import { NoApplicationRegistrationError } from "./errors/application-registration-not-exist";
 
 export class AuthorizationAgent {
@@ -31,13 +31,13 @@ export class AuthorizationAgent {
     static async new(session: Session): Promise<AuthorizationAgent> {
         const webId = session.info.webId!;
         const agentUri = webId2AuthorizationAgentUrl(webId);
-        const pods = await getPodUrlAll(webId, { fetch: session.fetch });
+        const pod = await getPod(webId, session.fetch);
         return new AuthorizationAgent(
             session,
             new SocialAgent(webId),
             new ApplicationAgent(agentUri),
-            pods[0],
-            await AuthorizationAgent.setRegistriesSetContainer(webId, pods[0], session.fetch),
+            pod.toString(),
+            await AuthorizationAgent.setRegistriesSetContainer(webId, pod.toString(), session.fetch),
         );
     }
 

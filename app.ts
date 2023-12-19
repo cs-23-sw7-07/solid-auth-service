@@ -349,7 +349,7 @@ authorizationRouter.post("/:webId/wants-access", async (req, res) => {
         return
     }
 
-    res.status(202).send("Access was granted.")
+    res.status(201).send("Access was granted.")
 });
 
 const podsRouter = express.Router()

@@ -24,7 +24,6 @@ export class AuthorizationAgent {
         public session: Session,
         public socialAgent: SocialAgent,
         public authorizationAgent: ApplicationAgent,
-        public pod: string,
         public registiesSet: RegistrySetResource,
     ) {}
 
@@ -36,7 +35,6 @@ export class AuthorizationAgent {
             session,
             new SocialAgent(webId),
             new ApplicationAgent(agentUri),
-            pod.toString(),
             await AuthorizationAgent.setRegistriesSetContainer(webId, pod.toString(), session.fetch),
         );
     }

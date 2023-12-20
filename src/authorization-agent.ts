@@ -24,7 +24,6 @@ export class AuthorizationAgent {
         public session: Session,
         public socialAgent: SocialAgent,
         public authorizationAgent: ApplicationAgent,
-        public pod: string,
         public registiesSet: RegistrySetResource,
     ) {}
 
@@ -36,7 +35,6 @@ export class AuthorizationAgent {
             session,
             new SocialAgent(webId),
             new ApplicationAgent(agentUri),
-            pod.toString(),
             await AuthorizationAgent.setRegistriesSetContainer(webId, pod.toString(), session.fetch),
         );
     }
@@ -65,7 +63,7 @@ export class AuthorizationAgent {
         return uri + randomUUID();
     }
 
-    async insertNewAgentToPod(approval: Approval) {
+    async insertNewAgentToPod(approval: Approval): Promise<void> {
         const authBuilder = new AuthorizationBuilder(
             this,
             approval.agent,

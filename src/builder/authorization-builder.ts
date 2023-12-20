@@ -48,7 +48,7 @@ export class AuthorizationBuilder {
     async createDataAuthorizations(dataAccessScopes: DataAccessScope[]) {
         for (const dataAccessScope of dataAccessScopes) {
             const shapeTree = dataAccessScope.accessNeed.RegisteredShapeTree;
-            const dataRegs: DataRegistration[] = await this.authorizationAgent.AllDataRegistrations;
+            const dataRegs: DataRegistration[] = await this.dataRegistry.getHasDataRegistrations();
             const exists = dataRegs.some((dataReg) => dataReg.RegisteredShapeTree === shapeTree);
 
             if (!exists) {

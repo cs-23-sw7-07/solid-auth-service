@@ -63,7 +63,7 @@ export class AuthorizationAgent {
         return uri + randomUUID();
     }
 
-    async insertNewAgentToPod(approval: Approval) {
+    async insertNewAgentToPod(approval: Approval): Promise<void> {
         const authBuilder = new AuthorizationBuilder(
             this,
             approval.agent,
